@@ -145,11 +145,58 @@ function makeSlider(label, id, value, min, max) {
 }
 
 // ═══════════════════════════════════════════════════
-// CHECKLIST DE HABILITAÇÃO
+// CHECKLIST DE HABILITAÇÃO (Nova Interface Profissional)
 // ═══════════════════════════════════════════════════
+
+const CATEGORY_COLORS = {
+  'Fiscal': 'cat-fiscal',
+  'Regularidade Fiscal - Federal': 'cat-fiscal',
+  'Societário': 'cat-societario',
+  'Trabalhista': 'cat-trabalhista',
+  'Técnica': 'cat-tecnica',
+  'Outros': 'cat-outros'
+};
+
+function getCategoryClass(category) {
+  return CATEGORY_COLORS[category] || 'cat-outros';
+}
+
+function getStatusInfo(doc) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (!doc.expiry) {
+    return { label: '⏳ Pendente', cssClass: 'st-warning', rowClass: '' };
+  }
+
+  const expDate = new Date(doc.expiry + 'T00:00:00');
+  const diffMs = expDate - today;
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return { label: '🔴 Vencido', cssClass: 'st-vencido', rowClass: 'row-vencido' };
+  }
+  if (diffDays <= 15) {
+    return { label: `🟠 Faltam ${diffDays} dias`, cssClass: 'st-warning', rowClass: 'row-warning' };
+  }
+  return { label: '✅ Atualizado', cssClass: 'st-ok', rowClass: '' };
+}
+
+function getLoggedUserName() {
+  const btn = document.getElementById('navbarLoginBtn');
+  if (btn && btn.classList.contains('btn-cloud-active')) {
+    return btn.textContent.replace('☁️ Ativo: ', '').trim();
+  }
+  return 'Local';
+}
+
 export function setupChecklist(getWorkbookFn, updateWorkbookFn) {
-  const addBtn = document.getElementById('addChecklistDocBtn');
-  if (!addBtn) return;
+  // References
+  const openModalBtn = document.getElementById('openAddChecklistModalBtn');
+  const modal = document.getElementById('addChecklistModal');
+  const closeModalBtn = document.getElementById('closeChecklistModalBtn');
+  const docForm = document.getElementById('checklistDocForm');
+  const selectAllCb = document.getElementById('selectAllDocs');
 
   function loadChecklist() {
     const wb = getWorkbookFn();
@@ -167,61 +214,139 @@ export function setupChecklist(getWorkbookFn, updateWorkbookFn) {
     const container = document.getElementById('checklistContainer');
     if (!container) return;
     const docs = loadChecklist();
+
     if (!docs.length) {
-      container.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-muted)">Nenhum documento cadastrado.</div>';
+      container.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted)">Nenhum documento cadastrado.</td></tr>';
       return;
     }
 
-    const today = new Date();
-    const STATUS_ICONS = { ok: '✅', pending: '⏳', expired: '❌' };
-    
     container.innerHTML = docs.map((doc, index) => {
-      let autoStatus = doc.status;
-      if (doc.expiry) {
-        const expDate = new Date(doc.expiry);
-        if (expDate < today) autoStatus = 'expired';
-        else if ((expDate - today) / (1000*60*60*24) < 15) autoStatus = 'pending';
-      }
-      const daysDiff = doc.expiry ? Math.ceil((new Date(doc.expiry) - today) / (1000*60*60*24)) : null;
-      const expiryText = daysDiff !== null
-        ? (daysDiff < 0 ? `<span style="color:var(--danger);font-weight:600">Vencido há ${Math.abs(daysDiff)}d</span>`
-          : daysDiff < 15 ? `<span style="color:var(--warning);font-weight:600">${daysDiff}d restantes</span>`
-          : `<span style="color:var(--green)">${daysDiff}d restantes</span>`)
-        : '';
+      const status = getStatusInfo(doc);
+      const catClass = getCategoryClass(doc.category || 'Outros');
+      const validadeFormatted = doc.expiry
+        ? new Date(doc.expiry + 'T12:00').toLocaleDateString('pt-BR')
+        : '—';
 
-      return `<div class="checklist-item status-${autoStatus}" style="--stagger: ${index + 1}">
-        <span style="font-size:1.1rem">${STATUS_ICONS[autoStatus] || '⏳'}</span>
-        <span style="flex:1;font-weight:500">${doc.name}</span>
-        ${expiryText}
-        <button type="button" data-checklist-remove="${doc.id}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem">×</button>
-      </div>`;
+      return `<tr class="${status.rowClass}" data-doc-id="${doc.id}">
+        <td class="checklist-drag-handle" style="text-align:center;">⋮⋮</td>
+        <td style="text-align:center;"><input type="checkbox" class="doc-checkbox" data-id="${doc.id}"></td>
+        <td><span class="badge-category ${catClass}">${escapeHtml(doc.category || 'Outros')}</span></td>
+        <td style="text-align:left;">${escapeHtml(doc.type || doc.name || '—')}</td>
+        <td><strong>${escapeHtml(doc.docName || doc.name || '—').toUpperCase()}</strong></td>
+        <td>${validadeFormatted}</td>
+        <td><span class="badge-status ${status.cssClass}">${status.label}</span></td>
+        <td>${escapeHtml(doc.createdBy || 'Local')}</td>
+        <td style="text-align:center;">
+          <select class="doc-action-select" data-id="${doc.id}" style="padding:4px;font-size:0.75rem;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text-main);cursor:pointer;">
+            <option value="">⋮ ▾</option>
+            <option value="delete">🗑️ Excluir</option>
+          </select>
+        </td>
+      </tr>`;
     }).join('');
 
-    container.querySelectorAll('[data-checklist-remove]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        saveChecklist(loadChecklist().filter(d => d.id !== btn.dataset.checklistRemove));
-        renderChecklist();
+    // Wire up action selects
+    container.querySelectorAll('.doc-action-select').forEach(sel => {
+      sel.addEventListener('change', () => {
+        if (sel.value === 'delete') {
+          const id = sel.dataset.id;
+          if (confirm('Deseja excluir este documento?')) {
+            saveChecklist(loadChecklist().filter(d => d.id !== id));
+            renderChecklist();
+          } else {
+            sel.value = '';
+          }
+        }
+      });
+    });
+
+    // Setup SortableJS on tbody
+    try {
+      if (typeof Sortable !== 'undefined') {
+        Sortable.create(container, {
+          handle: '.checklist-drag-handle',
+          animation: 200,
+          ghostClass: 'row-warning',
+          onEnd: () => {
+            const newOrder = [];
+            const currentDocs = loadChecklist();
+            container.querySelectorAll('tr[data-doc-id]').forEach(row => {
+              const found = currentDocs.find(d => d.id === row.dataset.docId);
+              if (found) newOrder.push(found);
+            });
+            saveChecklist(newOrder);
+          }
+        });
+      }
+    } catch (e) { /* SortableJS not available */ }
+  }
+
+  // Open / Close Modal
+  if (openModalBtn && modal) {
+    openModalBtn.addEventListener('click', () => {
+      modal.style.display = 'flex';
+    });
+  }
+  if (closeModalBtn && modal) {
+    closeModalBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
+  // Close modal on backdrop click
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+  }
+
+  // Form submit (add document via modal)
+  if (docForm) {
+    docForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const category = document.getElementById('docCategory')?.value || 'Outros';
+      const type = document.getElementById('docType')?.value.trim() || '';
+      const docName = document.getElementById('docName')?.value.trim() || '';
+      const expiry = document.getElementById('docExpiry')?.value || '';
+
+      if (!docName) return;
+
+      const docs = loadChecklist();
+      docs.push({
+        id: Date.now().toString(),
+        category,
+        type,
+        docName,
+        name: docName,
+        expiry,
+        status: 'pending',
+        createdBy: getLoggedUserName().toUpperCase()
+      });
+      saveChecklist(docs);
+
+      // Reset form and close
+      docForm.reset();
+      if (modal) modal.style.display = 'none';
+      renderChecklist();
+    });
+  }
+
+  // Select All checkbox
+  if (selectAllCb) {
+    selectAllCb.addEventListener('change', () => {
+      document.querySelectorAll('.doc-checkbox').forEach(cb => {
+        cb.checked = selectAllCb.checked;
       });
     });
   }
 
-  addBtn.addEventListener('click', () => {
-    const name = document.getElementById('checklistDocName')?.value.trim();
-    if (!name) return;
-    const docs = loadChecklist();
-    docs.push({
-      id: Date.now().toString(),
-      name,
-      expiry: document.getElementById('checklistDocExpiry')?.value || '',
-      status: document.getElementById('checklistDocStatus')?.value || 'pending'
+  // Also support legacy addChecklistDocBtn if it somehow still exists
+  const legacyAddBtn = document.getElementById('addChecklistDocBtn');
+  if (legacyAddBtn) {
+    legacyAddBtn.addEventListener('click', () => {
+      if (openModalBtn) openModalBtn.click();
     });
-    saveChecklist(docs);
-    document.getElementById('checklistDocName').value = '';
-    renderChecklist();
-  });
+  }
 
-  // Export renderChecklist inside or attach to an event if needed outside.
-  // Because navigation between workbooks implies re-rendering, we should ideally listen to a 'renderAll' event or just render.
   renderChecklist();
 }
 

@@ -1651,3 +1651,235 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   background: rgba(255, 255, 255, 0.45);
   border-radius: 12px;
 }
+
+/* =========================================
+   CHECKLIST DE HABILITAÇÃO (Nova Interface)
+========================================= */
+
+.checklist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  padding: 16px 24px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  margin-bottom: 8px;
+}
+
+.checklist-header-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.checklist-header-title h2 {
+  font-size: 1.4rem;
+  margin-bottom: 4px;
+  color: white;
+}
+
+.checklist-header-title p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.checklist-header-badge {
+  background: rgba(255,255,255,0.2);
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.checklist-actions-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #0ea5e9;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+
+.checklist-actions-title {
+  color: white;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.checklist-actions-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-success, .btn-cyan, .btn-warning-dark {
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition);
+  font-size: 0.9rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.btn-success { background: #10b981; }
+.btn-success:hover { background: #059669; }
+
+.btn-cyan { background: #06b6d4; }
+.btn-cyan:hover { background: #0891b2; }
+
+.btn-warning-dark { background: #d97706; }
+.btn-warning-dark:hover { background: #b45309; }
+
+.checklist-table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.checklist-table-header {
+  background: rgba(100, 116, 139, 0.8);
+  color: white;
+  padding: 10px 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checklist-drag-alert {
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.checklist-drag-alert span.icon {
+  color: var(--primary);
+}
+
+.checklist-table-container {
+  overflow-x: auto;
+}
+
+.checklist-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.checklist-table th {
+  background: rgba(15, 23, 42, 0.95) !important;
+  color: white;
+  text-align: center;
+  font-size: 0.75rem;
+  padding: 12px 8px;
+  border: none;
+}
+
+.checklist-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  vertical-align: middle;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Cores das linhas para os Status */
+.checklist-table tr.row-vencido td {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-bottom-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.checklist-table tr.row-warning td {
+  background: rgba(245, 158, 11, 0.18) !important;
+  border-bottom-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.checklist-drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+}
+
+.checklist-drag-handle:active {
+  cursor: grabbing;
+}
+
+.badge-category {
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-block;
+  color: white;
+}
+.badge-category.cat-fiscal { background: #e81cff; }
+.badge-category.cat-trabalhista { background: #3b82f6; }
+.badge-category.cat-societario { background: #14b8a6; }
+.badge-category.cat-tecnica { background: #f59e0b; }
+.badge-category.cat-outros { background: #64748b; }
+
+.badge-status {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-block;
+  color: white;
+}
+.badge-status.st-vencido { background: #ef4444; }
+.badge-status.st-warning { background: #f59e0b; }
+.badge-status.st-ok { background: #10b981; }
+
+.checklist-notifications-card {
+  background: #fbbf24;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.checklist-notifications-header {
+  padding: 10px 16px;
+  font-weight: 700;
+  color: #78350f;
+  background: rgba(251, 191, 36, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checklist-notifications-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checklist-notifications-body p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #78350f;
+}
+
+.checklist-notifications-body button {
+  width: max-content;
+}

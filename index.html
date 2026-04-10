@@ -692,23 +692,73 @@
 
       <!-- SUB: Checklist de Habilitação -->
       <div class="sub-content active" data-subcontent="checklist">
-        <div class="card">
-          <div class="section-title">
-            <h2>✅ Checklist de Habilitação</h2>
-            <p>Controle de documentos obrigatórios. Itens com vencimento próximo serão destacados.</p>
+        <!-- HEADER -->
+        <div class="checklist-header">
+          <div class="checklist-header-title">
+            <span class="icon">📄</span>
+            <div>
+              <h2>Documentos Básicos de Habilitação</h2>
+              <p>Gerencie os documentos essenciais para habilitação de sua empresa em licitações</p>
+            </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 120px 140px auto; gap: 8px; align-items: end; margin-top: 12px;">
-            <input type="text" id="checklistDocName" placeholder="Nome do documento (ex: CND Federal)" class="search-input">
-            <input type="date" id="checklistDocExpiry" class="search-input" title="Data de vencimento">
-            <select id="checklistDocStatus" class="search-input">
-              <option value="pending">⏳ Pendente</option>
-              <option value="ok">✅ OK</option>
-              <option value="expired">❌ Vencido</option>
-            </select>
-            <button type="button" id="addChecklistDocBtn" class="primary-button" style="height: 38px;">+ Add</button>
+          <div class="checklist-header-badge">🛡️ Documentos Seguros</div>
+        </div>
+
+        <!-- AÇÕES PRINCIPAIS -->
+        <div class="checklist-actions-bar">
+          <div class="checklist-actions-title">
+            <span class="icon">🛠️</span> Ações Principais
           </div>
-          <div id="checklistContainer" style="margin-top: 16px; display: flex; flex-direction: column; gap: 6px;">
-            <div style="text-align:center; padding:1.5rem; color:var(--text-muted)">Nenhum documento cadastrado.</div>
+          <div class="checklist-actions-buttons">
+            <button type="button" id="openAddChecklistModalBtn" class="btn-success">
+              <span>+</span> Adicionar Documento
+            </button>
+            <button type="button" id="downloadSelectedDocsBtn" class="btn-cyan">
+              <span>📥</span> Baixar Selecionados
+            </button>
+          </div>
+        </div>
+
+        <!-- TABELA DE DOCUMENTOS -->
+        <div class="checklist-table-card">
+          <div class="checklist-table-header">
+            <span class="icon">📑</span> Documentos Cadastrados
+          </div>
+          <div class="checklist-drag-alert">
+            <span class="icon">↕️</span> Você pode <strong>reordenar</strong> os documentos: arraste pela <span>⋮⋮</span> A ordem é salva automaticamente.
+          </div>
+          <div class="checklist-table-container">
+            <table class="pricing-table checklist-table" id="checklistTable">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center;">☰</th>
+                  <th style="width: 40px;"><input type="checkbox" id="selectAllDocs" title="Selecionar todos"></th>
+                  <th>Categoria</th>
+                  <th>Tipo</th>
+                  <th>Documento</th>
+                  <th>Validade</th>
+                  <th>Status</th>
+                  <th>Criado por</th>
+                  <th style="width: 80px; text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="checklistContainer">
+                <tr><td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhum documento cadastrado.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- NOTIFICAÇÕES -->
+        <div class="checklist-notifications-card">
+          <div class="checklist-notifications-header">
+            <span class="icon">🔔</span> Notificações
+          </div>
+          <div class="checklist-notifications-body">
+            <p>Receba alertas por email sobre documentos próximos do vencimento.</p>
+            <button type="button" class="btn-warning-dark">
+              <span>✉️</span> Enviar Notificações
+            </button>
           </div>
         </div>
       </div>
@@ -1094,6 +1144,50 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
+
+  <!-- MODAL DE ADIÇÃO DE DOCUMENTO DE HABILITAÇÃO -->
+  <div class="modal no-print" id="addChecklistModal" style="display: none; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 10000; padding: 16px;">
+    <form id="checklistDocForm" class="card" style="width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 16px;">
+      <div class="section-title" style="margin-bottom: 0;">
+        <h2>Adicionar Documento</h2>
+        <p>Preencha os dados do documento para controle da tabela.</p>
+      </div>
+      
+      <label class="toolbar-field" style="width: 100%; flex-direction: column; align-items: stretch; gap: 4px;">
+        <span style="font-size: 0.8rem; font-weight: 600;">Categoria</span>
+        <select id="docCategory" class="search-input" required>
+          <option value="Fiscal">Fiscal</option>
+          <option value="Regularidade Fiscal - Federal">Regularidade Fiscal - Federal</option>
+          <option value="Societário">Societário</option>
+          <option value="Trabalhista">Trabalhista</option>
+          <option value="Técnica">Técnica</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </label>
+
+      <label class="toolbar-field" style="width: 100%; flex-direction: column; align-items: stretch; gap: 4px;">
+        <span style="font-size: 0.8rem; font-weight: 600;">Tipo do Documento</span>
+        <input type="text" id="docType" class="search-input" placeholder="Ex: Certidão Negativa de Débitos..." required>
+      </label>
+
+      <label class="toolbar-field" style="width: 100%; flex-direction: column; align-items: stretch; gap: 4px;">
+        <span style="font-size: 0.8rem; font-weight: 600;">Documento (Sigla / Nome curto)</span>
+        <input type="text" id="docName" class="search-input" placeholder="Ex: CND FEDERAL" required>
+      </label>
+
+      <label class="toolbar-field" style="width: 100%; flex-direction: column; align-items: stretch; gap: 4px;">
+        <span style="font-size: 0.8rem; font-weight: 600;">Data de Validade</span>
+        <input type="date" id="docExpiry" class="search-input" required>
+      </label>
+
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+        <button type="button" class="ghost-button" id="closeChecklistModalBtn">Cancelar</button>
+        <button type="submit" class="primary-button" id="saveChecklistDocBtn">Adicionar</button>
+      </div>
+    </form>
+  </div>
+
   <script type="module" src="/src/js/main.js"></script>
 </body>
 </html>
