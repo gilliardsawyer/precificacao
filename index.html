@@ -1047,6 +1047,9 @@
             <h2>Fornecedores por Produto</h2>
             <p>Cadastre cotações e relacione fornecedores aos itens do catálogo global.</p>
           </div>
+          <div id="supplierMinWarning" class="dashboard-empty" style="display:none; margin-top:12px; border: 1px solid rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.12);">
+            Este produto possui menos de 3 fornecedores vinculados. Recomendação: vincular pelo menos 3 para uma cotação mais segura.
+          </div>
           <form id="productSupplierForm" style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:12px; margin-top:12px;">
             <label style="grid-column: span 2;">
               <span>Produto</span>
@@ -1054,11 +1057,19 @@
             </label>
             <label>
               <span>Fornecedor</span>
-              <input type="text" id="supplierCompanyName" class="search-input" placeholder="Ex.: Distribuidora Alfa">
+              <input type="text" id="supplierCompanyName" class="search-input" placeholder="Ex.: Distribuidora Alfa" list="supplierSuggestions">
             </label>
             <label>
               <span>CNPJ / Documento</span>
               <input type="text" id="supplierCompanyDocument" class="search-input" placeholder="00.000.000/0001-00">
+            </label>
+            <label>
+              <span>Marca</span>
+              <input type="text" id="supplierBrand" class="search-input" placeholder="Ex.: Dell">
+            </label>
+            <label>
+              <span>Modelo</span>
+              <input type="text" id="supplierModel" class="search-input" placeholder="Ex.: Inspiron 15">
             </label>
             <label>
               <span>Preço Cotado (R$)</span>
@@ -1069,8 +1080,27 @@
               <input type="number" id="supplierLeadTime" class="search-input" min="0" step="1" placeholder="5">
             </label>
             <label>
+              <span>Garantia</span>
+              <input type="text" id="supplierWarranty" class="search-input" placeholder="Ex.: 12 meses">
+            </label>
+            <label>
+              <span>Validade da proposta</span>
+              <input type="text" id="supplierProposalValidity" class="search-input" placeholder="Ex.: 60 dias">
+            </label>
+            <label>
               <span>Data da Cotação</span>
               <input type="date" id="supplierQuoteDate" class="search-input">
+            </label>
+            <label>
+              <span>Atende especificação mínima?</span>
+              <select id="supplierMeetsMinimum" class="search-input">
+                <option value="yes">Sim</option>
+                <option value="no">Não</option>
+              </select>
+            </label>
+            <label style="grid-column: span 4;">
+              <span>Características técnicas</span>
+              <textarea id="supplierTechCharacteristics" class="search-input" rows="2" placeholder="Características do item ofertado, configuração, padrões atendidos, etc."></textarea>
             </label>
             <label style="grid-column: span 4;">
               <span>Observações</span>
@@ -1094,16 +1124,20 @@
                 <tr>
                   <th>Produto</th>
                   <th>Fornecedor</th>
-                  <th>Documento</th>
-                  <th style="text-align:right;">Preço</th>
+                  <th>Marca/Modelo</th>
+                  <th style="text-align:right;">Preço unit.</th>
                   <th>Prazo</th>
+                  <th>Garantia</th>
+                  <th>Validade</th>
+                  <th>Atende mín.?</th>
                   <th>Data</th>
+                  <th>Características</th>
                   <th>Observações</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody id="productSupplierTableBody">
-                <tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum vínculo cadastrado ainda.</td></tr>
+                <tr><td colspan="12" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum vínculo cadastrado ainda.</td></tr>
               </tbody>
             </table>
           </div>

@@ -12,15 +12,22 @@ export function setupSuppliersHub() {
   const comparisonContainer = document.getElementById('supplierComparisonContainer');
   const reportsContainer = document.getElementById('supplierReportsContainer');
   const cancelEditButton = document.getElementById('cancelProductSupplierEditBtn');
+  const minSuppliersWarning = document.getElementById('supplierMinWarning');
 
   const fields = {
     id: document.getElementById('editingProductSupplierId'),
     productId: document.getElementById('supplierProductSelect'),
     supplierName: document.getElementById('supplierCompanyName'),
     supplierDocument: document.getElementById('supplierCompanyDocument'),
+    brand: document.getElementById('supplierBrand'),
+    model: document.getElementById('supplierModel'),
     quotedPrice: document.getElementById('supplierQuotedPrice'),
     leadTimeDays: document.getElementById('supplierLeadTime'),
+    warranty: document.getElementById('supplierWarranty'),
+    proposalValidity: document.getElementById('supplierProposalValidity'),
     quoteDate: document.getElementById('supplierQuoteDate'),
+    meetsMinimum: document.getElementById('supplierMeetsMinimum'),
+    techCharacteristics: document.getElementById('supplierTechCharacteristics'),
     notes: document.getElementById('supplierNotes')
   };
 
@@ -90,18 +97,28 @@ export function setupSuppliersHub() {
     });
 
     if (!relations.length) {
-      tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum vínculo de fornecedor cadastrado ainda.</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum vínculo de fornecedor cadastrado ainda.</td></tr>';
       return;
     }
+
+    const meetsBadge = (value) => {
+      if (value === false || value === 'no') return '<span class="badge-category cat-fiscal">Não</span>';
+      if (value === true || value === 'yes') return '<span class="badge-category cat-societario">Sim</span>';
+      return '<span class="badge-category cat-outros">—</span>';
+    };
 
     tableBody.innerHTML = relations.map((relation) => `
       <tr data-product-supplier-id="${relation.id}">
         <td>${escapeHtml(getProductLabel(relation, productMap))}</td>
         <td>${escapeHtml(relation.supplierName || '—')}</td>
-        <td>${escapeHtml(relation.supplierDocument || '—')}</td>
-        <td style="text-align:right;">${formatCurrency(relation.quotedPrice)}</td>
+        <td>${escapeHtml(`${relation.brand || '—'}${relation.model ? ` / ${relation.model}` : ''}`)}</td>
+        <td style="text-align:right;">${toNumber(relation.quotedPrice) > 0 ? formatCurrency(relation.quotedPrice) : '—'}</td>
         <td style="text-align:center;">${relation.leadTimeDays ? `${escapeHtml(String(relation.leadTimeDays))} dias` : '—'}</td>
+        <td style="text-align:center;">${escapeHtml(relation.warranty || '—')}</td>
+        <td style="text-align:center;">${escapeHtml(relation.proposalValidity || '—')}</td>
+        <td style="text-align:center;">${meetsBadge(relation.meetsMinimum)}</td>
         <td style="text-align:center;">${escapeHtml(relation.quoteDate || '—')}</td>
+        <td>${escapeHtml(relation.techCharacteristics || '—')}</td>
         <td>${escapeHtml(relation.notes || '—')}</td>
         <td style="text-align:center; display:flex; gap:4px; justify-content:center;">
           <button type="button" class="product-action-btn edit" data-action="edit-product-supplier" data-id="${relation.id}" title="Editar">✏️</button>
@@ -274,15 +291,22 @@ export function setupSuppliersHub() {
     fields.productId.value = relation.productId || '';
     fields.supplierName.value = relation.supplierName || '';
     fields.supplierDocument.value = relation.supplierDocument || '';
+    fields.brand.value = relation.brand || '';
+    fields.model.value = relation.model || '';
     fields.quotedPrice.value = relation.quotedPrice || 0;
     fields.leadTimeDays.value = relation.leadTimeDays || '';
+    fields.warranty.value = relation.warranty || '';
+    fields.proposalValidity.value = relation.proposalValidity || '';
     fields.quoteDate.value = relation.quoteDate || '';
+    fields.meetsMinimum.value = (relation.meetsMinimum === false || relation.meetsMinimum === 'no') ? 'no' : 'yes';
+    fields.techCharacteristics.value = relation.techCharacteristics || '';
     fields.notes.value = relation.notes || '';
     const submitButton = document.getElementById('saveProductSupplierBtn');
     if (submitButton) {
       submitButton.textContent = 'Atualizar vínculo';
     }
     cancelEditButton?.classList.remove('hidden');
+    updateMinSuppliersWarning();
   }
 
   function deleteRelation(id) {
@@ -299,6 +323,18 @@ export function setupSuppliersHub() {
     renderSupplierLinks();
     renderComparison();
     renderReports();
+    updateMinSuppliersWarning();
+  }
+
+  function updateMinSuppliersWarning() {
+    if (!minSuppliersWarning || !fields.productId) return;
+    const productId = fields.productId.value || '';
+    if (!productId) {
+      minSuppliersWarning.style.display = 'none';
+      return;
+    }
+    const count = loadProductSuppliers().filter((entry) => entry.productId === productId).length;
+    minSuppliersWarning.style.display = count < 3 ? 'block' : 'none';
   }
 
   if (tableBody) {
@@ -335,9 +371,15 @@ export function setupSuppliersHub() {
       productNameSnapshot: product?.name || '',
       supplierName: fields.supplierName.value.trim(),
       supplierDocument: fields.supplierDocument.value.trim(),
+      brand: fields.brand.value.trim(),
+      model: fields.model.value.trim(),
       quotedPrice: Math.max(0, toNumber(fields.quotedPrice.value)),
       leadTimeDays: Math.max(0, Math.round(toNumber(fields.leadTimeDays.value))),
+      warranty: fields.warranty.value.trim(),
+      proposalValidity: fields.proposalValidity.value.trim(),
       quoteDate: fields.quoteDate.value || '',
+      meetsMinimum: fields.meetsMinimum.value === 'no' ? false : true,
+      techCharacteristics: fields.techCharacteristics.value.trim(),
       notes: fields.notes.value.trim(),
       updatedAt: new Date().toISOString()
     };
@@ -356,6 +398,7 @@ export function setupSuppliersHub() {
 
   cancelEditButton?.addEventListener('click', resetForm);
   compareFilter?.addEventListener('change', renderComparison);
+  fields.productId?.addEventListener('change', updateMinSuppliersWarning);
   window.addEventListener('products:updated', refreshAll);
 
   refreshAll();
