@@ -1161,7 +1161,68 @@
         </div>
 
         <div id="supplierComparisonContainer" class="dashboard-shell">
-          <div class="dashboard-empty">Nenhum comparativo disponível. Cadastre fornecedores vinculados a produtos primeiro.</div>
+          <div class="card">
+            <div class="section-title">
+              <h2 id="licCompareProductName">Selecione um produto para comparar</h2>
+              <p id="licCompareProductCategory">—</p>
+            </div>
+            <div style="margin-top:12px;">
+              <div class="subsection-title">Descrição técnica mínima</div>
+              <div id="licCompareTechDescription" style="white-space: pre-wrap; background: var(--bg); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); color: var(--text-main);">—</div>
+            </div>
+          </div>
+
+          <div id="supplierCompareMinWarning" class="dashboard-empty" style="display:none; border: 1px solid rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.12);">
+            Alerta: este produto possui menos de 3 fornecedores vinculados. Recomendação: vincular pelo menos 3 para uma cotação mais segura.
+          </div>
+
+          <div class="dashboard-kpis">
+            <div class="dashboard-kpi">
+              <span>Fornecedores</span>
+              <strong id="licCompareSupplierCount">0</strong>
+              <small>Vínculos únicos</small>
+            </div>
+            <div class="dashboard-kpi">
+              <span>Menor preço</span>
+              <strong id="licCompareMinPrice">R$ 0,00</strong>
+              <small>Destaque automático</small>
+            </div>
+            <div class="dashboard-kpi">
+              <span>Maior preço</span>
+              <strong id="licCompareMaxPrice">R$ 0,00</strong>
+              <small>Entre as ofertas</small>
+            </div>
+            <div class="dashboard-kpi">
+              <span>Média de preços</span>
+              <strong id="licCompareAvgPrice">R$ 0,00</strong>
+              <small>Somente preços válidos</small>
+            </div>
+          </div>
+
+          <div class="checklist-table-card">
+            <div class="checklist-table-header">
+              <span class="icon">📊</span> Comparação lado a lado
+            </div>
+            <div class="checklist-table-container">
+              <table class="pricing-table">
+                <thead>
+                  <tr>
+                    <th>Fornecedor</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th style="text-align:right;">Preço</th>
+                    <th>Prazo</th>
+                    <th>Garantia</th>
+                    <th>Atende especificação</th>
+                    <th>Observações</th>
+                  </tr>
+                </thead>
+                <tbody id="supplierCompareTableBody">
+                  <tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Selecione um produto para ver o comparativo.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 

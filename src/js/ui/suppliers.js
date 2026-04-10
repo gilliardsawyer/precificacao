@@ -10,6 +10,15 @@ export function setupSuppliersHub() {
   const tableBody = document.getElementById('productSupplierTableBody');
   const compareFilter = document.getElementById('supplierCompareProductFilter');
   const comparisonContainer = document.getElementById('supplierComparisonContainer');
+  const compareHeaderName = document.getElementById('licCompareProductName');
+  const compareHeaderCategory = document.getElementById('licCompareProductCategory');
+  const compareTechDescription = document.getElementById('licCompareTechDescription');
+  const compareMinWarning = document.getElementById('supplierCompareMinWarning');
+  const compareSupplierCount = document.getElementById('licCompareSupplierCount');
+  const compareMinPrice = document.getElementById('licCompareMinPrice');
+  const compareMaxPrice = document.getElementById('licCompareMaxPrice');
+  const compareAvgPrice = document.getElementById('licCompareAvgPrice');
+  const compareTableBody = document.getElementById('supplierCompareTableBody');
   const reportsContainer = document.getElementById('supplierReportsContainer');
   const cancelEditButton = document.getElementById('cancelProductSupplierEditBtn');
   const minSuppliersWarning = document.getElementById('supplierMinWarning');
@@ -129,76 +138,88 @@ export function setupSuppliersHub() {
   }
 
   function renderComparison() {
-    if (!comparisonContainer) return;
+    if (!comparisonContainer || !compareTableBody) return;
 
     const selectedProductId = compareFilter?.value || '';
+    const products = getProducts();
     const productMap = getProductMap();
-    const relations = loadProductSuppliers().filter((relation) => !selectedProductId || relation.productId === selectedProductId);
+    const product = products.find((p) => p.id === selectedProductId);
 
-    const grouped = new Map();
-    relations.forEach((relation) => {
-      if (!grouped.has(relation.productId)) {
-        grouped.set(relation.productId, []);
-      }
-      grouped.get(relation.productId).push(relation);
-    });
-
-    if (!grouped.size) {
-      comparisonContainer.innerHTML = '<div class="dashboard-empty">Nenhum comparativo disponível. Cadastre fornecedores vinculados a produtos primeiro.</div>';
+    if (!selectedProductId || !product) {
+      if (compareHeaderName) compareHeaderName.textContent = 'Selecione um produto para comparar';
+      if (compareHeaderCategory) compareHeaderCategory.textContent = '—';
+      if (compareTechDescription) compareTechDescription.textContent = '—';
+      if (compareMinWarning) compareMinWarning.style.display = 'none';
+      if (compareSupplierCount) compareSupplierCount.textContent = '0';
+      if (compareMinPrice) compareMinPrice.textContent = formatCurrency(0);
+      if (compareMaxPrice) compareMaxPrice.textContent = formatCurrency(0);
+      if (compareAvgPrice) compareAvgPrice.textContent = formatCurrency(0);
+      compareTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Selecione um produto para ver o comparativo.</td></tr>';
       return;
     }
 
-    comparisonContainer.innerHTML = [...grouped.entries()].map(([productId, offers]) => {
-      const productName = getProductLabel(offers[0], productMap);
-      const sorted = [...offers].sort((a, b) => toNumber(a.quotedPrice) - toNumber(b.quotedPrice));
-      const best = sorted[0];
-      const highest = sorted[sorted.length - 1];
-      const spread = Math.max(0, toNumber(highest.quotedPrice) - toNumber(best.quotedPrice));
-      const spreadPercent = toNumber(best.quotedPrice) > 0 ? (spread / toNumber(best.quotedPrice)) * 100 : 0;
+    if (compareHeaderName) compareHeaderName.textContent = product.name || 'Produto base';
+    if (compareHeaderCategory) compareHeaderCategory.textContent = product.category ? `Categoria: ${product.category}` : 'Categoria: —';
+    if (compareTechDescription) compareTechDescription.textContent = product.technicalDescription?.trim() || '—';
 
+    const allLinks = loadProductSuppliers().filter((relation) => relation.productId === selectedProductId);
+    const bySupplierKey = new Map();
+    allLinks.forEach((relation) => {
+      const key = `${(relation.supplierName || '').trim().toLowerCase()}::${(relation.supplierDocument || '').trim().toLowerCase()}`;
+      const current = bySupplierKey.get(key);
+      const currentDate = current?.quoteDate ? new Date(`${current.quoteDate}T12:00:00`) : null;
+      const nextDate = relation.quoteDate ? new Date(`${relation.quoteDate}T12:00:00`) : null;
+      const currentTime = currentDate && !Number.isNaN(currentDate.getTime()) ? currentDate.getTime() : 0;
+      const nextTime = nextDate && !Number.isNaN(nextDate.getTime()) ? nextDate.getTime() : 0;
+
+      if (!current || nextTime > currentTime) {
+        bySupplierKey.set(key, relation);
+      }
+    });
+
+    const offers = [...bySupplierKey.values()].sort((a, b) => {
+      const aMeets = a.meetsMinimum === false ? 0 : 1;
+      const bMeets = b.meetsMinimum === false ? 0 : 1;
+      if (aMeets !== bMeets) return bMeets - aMeets;
+      return toNumber(a.quotedPrice) - toNumber(b.quotedPrice);
+    });
+
+    if (compareSupplierCount) compareSupplierCount.textContent = String(offers.length);
+    if (compareMinWarning) compareMinWarning.style.display = offers.length < 3 ? 'block' : 'none';
+
+    const priceValues = offers.map((o) => toNumber(o.quotedPrice)).filter((v) => v > 0);
+    const min = priceValues.length ? Math.min(...priceValues) : 0;
+    const max = priceValues.length ? Math.max(...priceValues) : 0;
+    const avg = priceValues.length ? (priceValues.reduce((a, b) => a + b, 0) / priceValues.length) : 0;
+    if (compareMinPrice) compareMinPrice.textContent = formatCurrency(min);
+    if (compareMaxPrice) compareMaxPrice.textContent = formatCurrency(max);
+    if (compareAvgPrice) compareAvgPrice.textContent = formatCurrency(avg);
+
+    const meetsBadge = (value) => {
+      if (value === false || value === 'no') return '<span class="badge-category cat-fiscal">Não</span>';
+      if (value === true || value === 'yes') return '<span class="badge-category cat-societario">Sim</span>';
+      return '<span class="badge-category cat-outros">—</span>';
+    };
+
+    compareTableBody.innerHTML = offers.length ? offers.map((offer) => {
+      const price = toNumber(offer.quotedPrice);
+      const isMin = priceValues.length && price > 0 && price === min;
+      const meets = !(offer.meetsMinimum === false || offer.meetsMinimum === 'no');
+      const rowClass = `${isMin ? 'compare-row-min' : ''} ${meets ? 'compare-row-meets' : ''}`.trim();
+      const priceClass = isMin ? 'compare-price-min' : '';
       return `
-        <div class="dashboard-panel">
-          <div class="dashboard-panel-header">
-            <h3>${escapeHtml(productName)}</h3>
-            <p>${sorted.length} cotação(ões) cadastrada(s)</p>
-          </div>
-          <div class="dashboard-list">
-            <article class="dashboard-item">
-              <div>
-                <strong>Melhor oferta</strong>
-                <small>${escapeHtml(best.supplierName || 'Fornecedor não informado')}</small>
-              </div>
-              <div class="dashboard-metrics">
-                <span>${formatCurrency(best.quotedPrice)}</span>
-                <small>Prazo ${best.leadTimeDays ? `${escapeHtml(String(best.leadTimeDays))} dia(s)` : 'não informado'}</small>
-              </div>
-            </article>
-            <article class="dashboard-item">
-              <div>
-                <strong>Amplitude de preço</strong>
-                <small>Diferença entre menor e maior cotação</small>
-              </div>
-              <div class="dashboard-metrics">
-                <span>${formatCurrency(spread)}</span>
-                <small>${formatPercent(spreadPercent)}</small>
-              </div>
-            </article>
-            ${sorted.slice(0, 4).map((offer, index) => `
-              <article class="dashboard-item">
-                <div>
-                  <strong>${index + 1}º ${escapeHtml(offer.supplierName || 'Fornecedor')}</strong>
-                  <small>${escapeHtml(offer.supplierDocument || 'Documento não informado')}</small>
-                </div>
-                <div class="dashboard-metrics">
-                  <span>${formatCurrency(offer.quotedPrice)}</span>
-                  <small>${offer.quoteDate ? escapeHtml(offer.quoteDate) : 'Sem data'}</small>
-                </div>
-              </article>
-            `).join('')}
-          </div>
-        </div>
+        <tr class="${rowClass}">
+          <td>${escapeHtml(offer.supplierName || '—')}</td>
+          <td>${escapeHtml(offer.brand || '—')}</td>
+          <td>${escapeHtml(offer.model || '—')}</td>
+          <td style="text-align:right;" class="${priceClass}">${price > 0 ? formatCurrency(price) : '—'}</td>
+          <td style="text-align:center;">${offer.leadTimeDays ? `${escapeHtml(String(offer.leadTimeDays))} dias` : '—'}</td>
+          <td style="text-align:center;">${escapeHtml(offer.warranty || '—')}</td>
+          <td style="text-align:center;">${meetsBadge(offer.meetsMinimum)}</td>
+          <td>${escapeHtml(offer.notes || '—')}</td>
+        </tr>
       `;
-    }).join('');
+    }).join('') : '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum fornecedor vinculado a este produto ainda.</td></tr>';
   }
 
   function renderReports() {
