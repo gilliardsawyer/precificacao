@@ -1,4 +1,4 @@
-import { loadProducts, saveProducts, updateProducts } from '../storage/local.js';
+import { loadProducts, saveProducts, updateProducts, loadProductSuppliers } from '../storage/local.js';
 import { formatCurrency, escapeHtml, toNumber } from '../core/utils.js';
 import { showNotification } from './toasts.js';
 
@@ -11,36 +11,104 @@ export function setupProducts() {
     const closeModalBtn = document.getElementById('closeProductModalBtn');
     const productForm = document.getElementById('productForm');
     const searchInput = document.getElementById('productSearchInput');
+    const categoryFilter = document.getElementById('productCategoryFilter');
     const container = document.getElementById('productContainer');
 
     if (!container) return;
 
+    const QUOTE_STALE_DAYS = 30;
+
+    function normalizeText(value) {
+        return (value || '').toString().trim().toLowerCase();
+    }
+
+    function getSupplierStats(productId) {
+        const links = loadProductSuppliers().filter((entry) => entry.productId === productId);
+        if (!links.length) {
+            return { supplierCount: 0, minPrice: null, quoteStatus: 'none' };
+        }
+
+        const supplierKeys = new Set();
+        let minPrice = null;
+        let latestQuoteDate = null;
+
+        links.forEach((entry) => {
+            const key = `${normalizeText(entry.supplierName)}::${normalizeText(entry.supplierDocument)}`;
+            if (key !== '::') supplierKeys.add(key);
+            const price = toNumber(entry.quotedPrice);
+            if (price > 0 && (minPrice === null || price < minPrice)) {
+                minPrice = price;
+            }
+            if (entry.quoteDate) {
+                const dt = new Date(`${entry.quoteDate}T12:00:00`);
+                if (!Number.isNaN(dt.getTime()) && (!latestQuoteDate || dt > latestQuoteDate)) {
+                    latestQuoteDate = dt;
+                }
+            }
+        });
+
+        const now = new Date();
+        const isStale = latestQuoteDate
+            ? (Math.floor((now.getTime() - latestQuoteDate.getTime()) / (1000 * 60 * 60 * 24)) > QUOTE_STALE_DAYS)
+            : false;
+
+        return {
+            supplierCount: supplierKeys.size || links.length,
+            minPrice,
+            quoteStatus: isStale ? 'stale' : 'ok'
+        };
+    }
+
+    function getQuoteBadge(status) {
+        if (status === 'ok') return '<span class="badge-category cat-societario">Cotado</span>';
+        if (status === 'stale') return '<span class="badge-category cat-tecnica">Desatualizado</span>';
+        return '<span class="badge-category cat-outros">Sem cotação</span>';
+    }
+
+    function renderCategoryFilter(products) {
+        if (!categoryFilter) return;
+        const current = categoryFilter.value || '';
+        const categories = [...new Set(products.map((p) => (p.category || '').trim()).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b));
+        categoryFilter.innerHTML = [
+            '<option value="">Todas as categorias</option>',
+            ...categories.map((cat) => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`)
+        ].join('');
+        categoryFilter.value = categories.includes(current) ? current : '';
+    }
+
     function renderProducts(term = '') {
         const products = loadProducts();
         const searchTerm = term.trim().toLowerCase();
-        
-        const filtered = products.filter(p => 
-            (p.name || '').toLowerCase().includes(searchTerm) ||
-            (p.sku || '').toLowerCase().includes(searchTerm) ||
-            (p.brand || '').toLowerCase().includes(searchTerm)
+        renderCategoryFilter(products);
+        const selectedCategory = (categoryFilter?.value || '').trim();
+
+        const supplierStatsByProductId = new Map(
+            products.map((product) => [product.id, getSupplierStats(product.id)])
         );
+        
+        const filtered = products.filter(p => {
+            const matchName = (p.name || '').toLowerCase().includes(searchTerm);
+            const matchCategory = !selectedCategory || (p.category || '').trim() === selectedCategory;
+            return matchName && matchCategory;
+        });
 
         if (filtered.length === 0) {
-            container.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                ${term ? 'Nenhum produto encontrado para sua busca.' : 'Nenhum produto cadastrado no catálogo.'}
+            container.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                ${(term || selectedCategory) ? 'Nenhum produto encontrado para os filtros atuais.' : 'Nenhum produto cadastrado no catálogo.'}
             </td></tr>`;
             return;
         }
 
         container.innerHTML = filtered.map(product => `
             <tr data-product-id="${product.id}">
-                <td><span class="product-sku">${escapeHtml(product.sku || '—')}</span></td>
                 <td class="product-name-cell">${escapeHtml(product.name)}</td>
-                <td><span class="product-brand-cell">${escapeHtml(product.brand || '—')}</span></td>
                 <td><span class="badge-category cat-outros">${escapeHtml(product.category || 'Geral')}</span></td>
-                <td class="product-cost">${formatCurrency(product.costPrice)}</td>
-                <td style="text-align: center;">${escapeHtml(product.unit || 'UN')}</td>
+                <td style="text-align:center; font-weight:700;">${supplierStatsByProductId.get(product.id).supplierCount}</td>
+                <td class="product-cost">${supplierStatsByProductId.get(product.id).minPrice === null ? '—' : formatCurrency(supplierStatsByProductId.get(product.id).minPrice)}</td>
+                <td style="text-align:center;">${getQuoteBadge(supplierStatsByProductId.get(product.id).quoteStatus)}</td>
                 <td style="text-align: center; display: flex; gap: 4px; justify-content: center;">
+                    <button class="product-action-btn compare" title="Abrir comparativo" data-compare-id="${product.id}">📊</button>
                     <button class="product-action-btn edit" title="Editar" data-id="${product.id}">✏️</button>
                     <button class="product-action-btn delete" title="Excluir" data-id="${product.id}">🗑️</button>
                 </td>
@@ -54,6 +122,9 @@ export function setupProducts() {
         container.querySelectorAll('.delete').forEach(btn => {
             btn.addEventListener('click', () => deleteProduct(btn.dataset.id));
         });
+        container.querySelectorAll('[data-compare-id]').forEach(btn => {
+            btn.addEventListener('click', () => openComparisonForProduct(btn.dataset.compareId));
+        });
     }
 
     function editProduct(id) {
@@ -62,12 +133,11 @@ export function setupProducts() {
         if (!product) return;
 
         document.getElementById('editingProdId').value = product.id;
-        document.getElementById('prodSku').value = product.sku || '';
         document.getElementById('prodName').value = product.name || '';
-        document.getElementById('prodBrand').value = product.brand || '';
         document.getElementById('prodCategory').value = product.category || '';
         document.getElementById('prodUnit').value = product.unit || 'UN';
-        document.getElementById('prodCost').value = product.costPrice || 0;
+        document.getElementById('prodStatus').value = product.status || 'active';
+        document.getElementById('prodDescription').value = product.technicalDescription || '';
 
         document.getElementById('saveProductBtn').textContent = 'Atualizar Produto';
         modal.style.display = 'flex';
@@ -92,6 +162,8 @@ export function setupProducts() {
             productForm.reset();
             document.getElementById('editingProdId').value = '';
             document.getElementById('saveProductBtn').textContent = 'Salvar no Catálogo';
+            const statusEl = document.getElementById('prodStatus');
+            if (statusEl) statusEl.value = 'active';
             modal.style.display = 'flex';
         });
     }
@@ -109,12 +181,12 @@ export function setupProducts() {
             const id = document.getElementById('editingProdId').value;
             const productData = {
                 id: id || Date.now().toString(),
-                sku: document.getElementById('prodSku').value.trim(),
                 name: document.getElementById('prodName').value.trim(),
-                brand: document.getElementById('prodBrand').value.trim(),
                 category: document.getElementById('prodCategory').value.trim(),
                 unit: document.getElementById('prodUnit').value.trim(),
-                costPrice: toNumber(document.getElementById('prodCost').value)
+                status: document.getElementById('prodStatus').value || 'active',
+                technicalDescription: document.getElementById('prodDescription').value.trim(),
+                updatedAt: new Date().toISOString()
             };
 
             updateProducts(products => {
@@ -136,6 +208,11 @@ export function setupProducts() {
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             renderProducts(searchInput.value);
+        });
+    }
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => {
+            renderProducts(searchInput ? searchInput.value : '');
         });
     }
 
@@ -170,14 +247,28 @@ export function hookProductSelection() {
         const found = products.find(p => p.name === nameInput.value);
         
         if (found) {
-            const manufacturerInput = document.getElementById('manufacturer');
             const unitPriceInput = document.getElementById('unitPrice');
-            // Nota: Se houver campo de fornecedor ou unidade no form principal, preencher aqui também
-            
-            if (manufacturerInput) manufacturerInput.value = found.brand || '';
-            if (unitPriceInput) unitPriceInput.value = found.costPrice || 0;
+            const links = loadProductSuppliers().filter((entry) => entry.productId === found.id);
+            const minQuoted = links.reduce((min, entry) => {
+                const value = toNumber(entry.quotedPrice);
+                if (value <= 0) return min;
+                return min === null || value < min ? value : min;
+            }, null);
+
+            if (unitPriceInput && minQuoted !== null) unitPriceInput.value = minQuoted;
             
             showNotification(`Produto "${found.name}" carregado do catálogo!`, 'info');
         }
     });
+}
+
+function openComparisonForProduct(productId) {
+    const moduleTab = document.querySelector('.sub-tabs[data-group="suppliers"] [data-subtab="supplier-comparison"]');
+    if (moduleTab) moduleTab.click();
+
+    const filter = document.getElementById('supplierCompareProductFilter');
+    if (filter) {
+        filter.value = productId;
+        filter.dispatchEvent(new Event('change'));
+    }
 }

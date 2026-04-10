@@ -993,8 +993,8 @@
           <div class="checklist-header-title">
             <span class="icon">📦</span>
             <div>
-              <h2>Fornecedores · Produtos</h2>
-              <p>Gerencie sua base de itens para cotação e precificação padronizada</p>
+              <h2>Produtos Base da Licitação</h2>
+              <p>Cadastre itens base e acompanhe fornecedores vinculados, menor preço e status de cotação</p>
             </div>
           </div>
           <div class="checklist-header-badge" style="background: rgba(255,255,255,0.2);">📦 Catálogo Ativo</div>
@@ -1005,7 +1005,10 @@
             <span class="icon">🔍</span> Filtros e Cadastro
           </div>
           <div style="display: flex; gap: 12px; align-items: center; flex: 1; padding: 0 16px;">
-            <input type="text" id="productSearchInput" class="search-input" placeholder="Buscar por nome, marca ou SKU..." style="flex: 1; height: 40px;">
+            <input type="text" id="productSearchInput" class="search-input" placeholder="Buscar por nome do produto..." style="flex: 1; height: 40px;">
+            <select id="productCategoryFilter" class="search-input" style="width: 220px; height: 40px;">
+              <option value="">Todas as categorias</option>
+            </select>
           </div>
           <div class="checklist-actions-buttons">
             <button type="button" id="openAddProductModalBtn" class="btn-success">
@@ -1022,17 +1025,16 @@
             <table class="pricing-table product-table" id="productDatabaseTable">
               <thead>
                 <tr>
-                  <th style="width: 120px;">SKU</th>
                   <th>Produto</th>
-                  <th style="width: 150px;">Marca</th>
-                  <th style="width: 150px;">Categoria</th>
-                  <th style="width: 120px; text-align: right;">Custo Base</th>
-                  <th style="width: 80px; text-align: center;">Unid.</th>
-                  <th style="width: 80px; text-align: center;">Ações</th>
+                  <th style="width: 170px;">Categoria</th>
+                  <th style="width: 140px; text-align: center;">Fornecedores</th>
+                  <th style="width: 140px; text-align: right;">Menor Preço</th>
+                  <th style="width: 160px; text-align: center;">Status da Cotação</th>
+                  <th style="width: 120px; text-align: center;">Ações</th>
                 </tr>
               </thead>
               <tbody id="productContainer">
-                <tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhum produto cadastrado no catálogo.</td></tr>
+                <tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhum produto cadastrado no catálogo.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1392,18 +1394,22 @@
   <div class="modal no-print" id="addProductModal" style="display: none; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 10000; padding: 16px;">
     <form id="productForm" class="card" style="width: 100%; max-width: 550px; display: flex; flex-direction: column; gap: 16px;">
       <div class="section-title" style="margin-bottom: 0;">
-        <h2>Cadastrar Produto</h2>
-        <p>Adicione as informações base do produto para o catálogo.</p>
+        <h2>Cadastrar Produto Base</h2>
+        <p>Este cadastro representa o item base da licitação, não um item específico do fornecedor.</p>
       </div>
       
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <label class="toolbar-field" style="flex-direction: column; align-items: stretch; gap: 4px;">
-          <span style="font-size: 0.8rem; font-weight: 600;">SKU / Código</span>
-          <input type="text" id="prodSku" class="search-input" placeholder="Ex: HW-001">
-        </label>
-        <label class="toolbar-field" style="flex-direction: column; align-items: stretch; gap: 4px;">
           <span style="font-size: 0.8rem; font-weight: 600;">Categoria</span>
           <input type="text" id="prodCategory" class="search-input" placeholder="Ex: Hardware" list="productCategoryList">
+        </label>
+        <label class="toolbar-field" style="flex-direction: column; align-items: stretch; gap: 4px;">
+          <span style="font-size: 0.8rem; font-weight: 600;">Status</span>
+          <select id="prodStatus" class="search-input">
+            <option value="active">Ativo</option>
+            <option value="draft">Rascunho</option>
+            <option value="inactive">Inativo</option>
+          </select>
         </label>
       </div>
 
@@ -1412,21 +1418,18 @@
         <input type="text" id="prodName" class="search-input" placeholder="Ex: Notebook Intel Core i5 16GB RAM..." required>
       </label>
 
+      <label class="toolbar-field" style="width: 100%; flex-direction: column; align-items: stretch; gap: 4px;">
+        <span style="font-size: 0.8rem; font-weight: 600;">Descrição técnica mínima</span>
+        <textarea id="prodDescription" class="search-input" rows="3" placeholder="Especificações mínimas, modelo de referência, requisitos técnicos ou padrões aceitos."></textarea>
+      </label>
+
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <label class="toolbar-field" style="flex-direction: column; align-items: stretch; gap: 4px;">
-          <span style="font-size: 0.8rem; font-weight: 600;">Marca / Fabricante</span>
-          <input type="text" id="prodBrand" class="search-input" placeholder="Ex: Dell">
-        </label>
-        <label class="toolbar-field" style="flex-direction: column; align-items: stretch; gap: 4px;">
-          <span style="font-size: 0.8rem; font-weight: 600;">Unidade</span>
+          <span style="font-size: 0.8rem; font-weight: 600;">Unidade de medida</span>
           <input type="text" id="prodUnit" class="search-input" placeholder="Ex: UN" value="UN">
         </label>
+        <div></div>
       </div>
-
-      <label class="toolbar-field" style="width: 100%; flex-direction: column; align-items: stretch; gap: 4px;">
-        <span style="font-size: 0.8rem; font-weight: 600;">Preço de Custo Base (R$)</span>
-        <input type="number" id="prodCost" class="search-input" placeholder="0,00" step="0.01" required>
-      </label>
 
       <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
         <input type="hidden" id="editingProdId" value="">
