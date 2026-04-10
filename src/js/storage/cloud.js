@@ -68,3 +68,119 @@ export async function loadFromCloud() {
   }
   return null;
 }
+
+// ============================================================================
+// Backend do módulo de licitação (mínimo necessário)
+// ============================================================================
+
+export async function listBidProducts() {
+  const session = await checkSession();
+  if (!session) return [];
+  const { data, error } = await supabase
+    .from('bid_products')
+    .select('*')
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createBidProduct(payload) {
+  const session = await checkSession();
+  if (!session) throw new Error('Not authenticated');
+  const record = {
+    user_id: session.user.id,
+    name: payload.name || '',
+    category: payload.category || '',
+    technical_description: payload.technical_description || '',
+    unit: payload.unit || 'UN',
+    status: payload.status || 'draft'
+  };
+  const { data, error } = await supabase
+    .from('bid_products')
+    .insert(record)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateBidProduct(id, patch) {
+  const session = await checkSession();
+  if (!session) throw new Error('Not authenticated');
+  const { data, error } = await supabase
+    .from('bid_products')
+    .update({
+      ...patch
+    })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteBidProduct(id) {
+  const session = await checkSession();
+  if (!session) throw new Error('Not authenticated');
+  const { error } = await supabase.from('bid_products').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+export async function listBidProductSuppliers(productId) {
+  const session = await checkSession();
+  if (!session) return [];
+  const { data, error } = await supabase
+    .from('bid_product_suppliers')
+    .select('*')
+    .eq('product_id', productId)
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function upsertBidProductSupplier(payload) {
+  const session = await checkSession();
+  if (!session) throw new Error('Not authenticated');
+  const record = {
+    id: payload.id || undefined,
+    user_id: session.user.id,
+    product_id: payload.product_id,
+    supplier_name: payload.supplier_name,
+    supplier_document: payload.supplier_document || '',
+    brand: payload.brand || '',
+    model: payload.model || '',
+    unit_price: payload.unit_price || 0,
+    lead_time_days: payload.lead_time_days || 0,
+    warranty: payload.warranty || '',
+    proposal_validity: payload.proposal_validity || '',
+    tech_characteristics: payload.tech_characteristics || '',
+    meets_minimum: payload.meets_minimum !== false,
+    notes: payload.notes || '',
+    quote_date: payload.quote_date || null
+  };
+
+  const { data, error } = await supabase
+    .from('bid_product_suppliers')
+    .upsert(record, { onConflict: 'id' })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteBidProductSupplier(id) {
+  const session = await checkSession();
+  if (!session) throw new Error('Not authenticated');
+  const { error } = await supabase.from('bid_product_suppliers').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+export async function getBidProductComparison(productId) {
+  const session = await checkSession();
+  if (!session) throw new Error('Not authenticated');
+  const { data, error } = await supabase.rpc('get_bid_product_comparison', { p_product_id: productId });
+  if (error) throw error;
+  return data;
+}
