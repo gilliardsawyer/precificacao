@@ -17,7 +17,7 @@
       <div class="nav-item" data-nav="management" title="Gestão do Processo"><span class="icon">📄</span></div>
       <div class="nav-item" data-nav="logistics" title="Logística e Cubagem"><span class="icon">🚚</span></div>
       <div class="nav-item" data-nav="analytics" title="Concorrência e Mercado"><span class="icon">🥇</span></div>
-      <div class="nav-item" data-nav="products" title="Produtos"><span class="icon">📦</span></div>
+      <div class="nav-item" data-nav="suppliers" title="Fornecedores"><span class="icon">📦</span></div>
       <div class="nav-item" data-nav="financial" title="Financeiro"><span class="icon">💳</span></div>
       <div class="nav-item" data-nav="ai" title="Inteligência Artificial"><span class="icon">🤖</span></div>
     </nav>
@@ -977,60 +977,196 @@
   </section>
 
   <!-- ═══════════════════════════════════════════════════ -->
-  <!-- MÓDULO: CADASTRO DE PRODUTOS                       -->
+  <!-- MÓDULO: FORNECEDORES                               -->
   <!-- ═══════════════════════════════════════════════════ -->
-  <section id="module-products" class="module-content module-hidden no-print">
+  <section id="module-suppliers" class="module-content module-hidden no-print">
     <div style="max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
-      
-      <!-- HEADER -->
-      <div class="checklist-header" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
-        <div class="checklist-header-title">
-          <span class="icon">📦</span>
-          <div>
-            <h2>Catálogo Global de Produtos</h2>
-            <p>Gerencie sua base de itens para precificação padronizada</p>
+      <div class="sub-tabs" data-group="suppliers">
+        <button class="sub-tab active" data-subtab="supplier-products">Produtos</button>
+        <button class="sub-tab" data-subtab="product-suppliers">Fornecedores por Produto</button>
+        <button class="sub-tab" data-subtab="supplier-comparison">Comparativo</button>
+        <button class="sub-tab" data-subtab="supplier-reports">Relatórios</button>
+      </div>
+
+      <div class="sub-content active" data-subcontent="supplier-products">
+        <div class="checklist-header" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+          <div class="checklist-header-title">
+            <span class="icon">📦</span>
+            <div>
+              <h2>Fornecedores · Produtos</h2>
+              <p>Gerencie sua base de itens para cotação e precificação padronizada</p>
+            </div>
+          </div>
+          <div class="checklist-header-badge" style="background: rgba(255,255,255,0.2);">📦 Catálogo Ativo</div>
+        </div>
+
+        <div class="checklist-actions-bar">
+          <div class="checklist-actions-title">
+            <span class="icon">🔍</span> Filtros e Cadastro
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; flex: 1; padding: 0 16px;">
+            <input type="text" id="productSearchInput" class="search-input" placeholder="Buscar por nome, marca ou SKU..." style="flex: 1; height: 40px;">
+          </div>
+          <div class="checklist-actions-buttons">
+            <button type="button" id="openAddProductModalBtn" class="btn-success">
+              <span>+</span> Novo Produto
+            </button>
           </div>
         </div>
-        <div class="checklist-header-badge" style="background: rgba(255,255,255,0.2);">📦 Catálogo Ativo</div>
+
+        <div class="checklist-table-card">
+          <div class="checklist-table-header">
+            <span class="icon">🏷️</span> Itens Cadastrados
+          </div>
+          <div class="checklist-table-container">
+            <table class="pricing-table product-table" id="productDatabaseTable">
+              <thead>
+                <tr>
+                  <th style="width: 120px;">SKU</th>
+                  <th>Produto</th>
+                  <th style="width: 150px;">Marca</th>
+                  <th style="width: 150px;">Categoria</th>
+                  <th style="width: 120px; text-align: right;">Custo Base</th>
+                  <th style="width: 80px; text-align: center;">Unid.</th>
+                  <th style="width: 80px; text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="productContainer">
+                <tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhum produto cadastrado no catálogo.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      <!-- AÇÕES PRINCIPAIS -->
-      <div class="checklist-actions-bar">
-        <div class="checklist-actions-title">
-          <span class="icon">🔍</span> Filtros e Cadastro
+      <div class="sub-content" data-subcontent="product-suppliers" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>Fornecedores por Produto</h2>
+            <p>Cadastre cotações e relacione fornecedores aos itens do catálogo global.</p>
+          </div>
+          <form id="productSupplierForm" style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:12px; margin-top:12px;">
+            <label style="grid-column: span 2;">
+              <span>Produto</span>
+              <select id="supplierProductSelect" class="search-input"></select>
+            </label>
+            <label>
+              <span>Fornecedor</span>
+              <input type="text" id="supplierCompanyName" class="search-input" placeholder="Ex.: Distribuidora Alfa">
+            </label>
+            <label>
+              <span>CNPJ / Documento</span>
+              <input type="text" id="supplierCompanyDocument" class="search-input" placeholder="00.000.000/0001-00">
+            </label>
+            <label>
+              <span>Preço Cotado (R$)</span>
+              <input type="number" id="supplierQuotedPrice" class="search-input" min="0" step="0.01" placeholder="0,00">
+            </label>
+            <label>
+              <span>Prazo (dias)</span>
+              <input type="number" id="supplierLeadTime" class="search-input" min="0" step="1" placeholder="5">
+            </label>
+            <label>
+              <span>Data da Cotação</span>
+              <input type="date" id="supplierQuoteDate" class="search-input">
+            </label>
+            <label style="grid-column: span 4;">
+              <span>Observações</span>
+              <textarea id="supplierNotes" class="search-input" rows="2" placeholder="Condição comercial, contato, validade da cotação ou observações gerais."></textarea>
+            </label>
+            <div style="grid-column: 1 / -1; display:flex; justify-content:flex-end; gap:8px;">
+              <input type="hidden" id="editingProductSupplierId" value="">
+              <button type="button" id="cancelProductSupplierEditBtn" class="ghost-button hidden">Cancelar edição</button>
+              <button type="submit" id="saveProductSupplierBtn" class="primary-button">Salvar vínculo</button>
+            </div>
+          </form>
         </div>
-        <div style="display: flex; gap: 12px; align-items: center; flex: 1; padding: 0 16px;">
-          <input type="text" id="productSearchInput" class="search-input" placeholder="Buscar por nome, marca ou SKU..." style="flex: 1; height: 40px;">
-        </div>
-        <div class="checklist-actions-buttons">
-          <button type="button" id="openAddProductModalBtn" class="btn-success">
-            <span>+</span> Novo Produto
-          </button>
+
+        <div class="checklist-table-card">
+          <div class="checklist-table-header">
+            <span class="icon">🤝</span> Vínculos cadastrados
+          </div>
+          <div class="checklist-table-container">
+            <table class="pricing-table">
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Fornecedor</th>
+                  <th>Documento</th>
+                  <th style="text-align:right;">Preço</th>
+                  <th>Prazo</th>
+                  <th>Data</th>
+                  <th>Observações</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="productSupplierTableBody">
+                <tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum vínculo cadastrado ainda.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- TABELA DE PRODUTOS -->
-      <div class="checklist-table-card">
-        <div class="checklist-table-header">
-          <span class="icon">🏷️</span> Itens Cadastrados
+      <div class="sub-content" data-subcontent="supplier-comparison" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>Comparativo</h2>
+            <p>Analise as melhores ofertas por produto, diferença entre cotações e prazos praticados.</p>
+          </div>
+          <div style="display:flex; gap:12px; align-items:end; margin-top:12px; flex-wrap:wrap;">
+            <label style="min-width:260px;">
+              <span>Filtrar produto</span>
+              <select id="supplierCompareProductFilter" class="search-input">
+                <option value="">Todos os produtos</option>
+              </select>
+            </label>
+          </div>
         </div>
-        <div class="checklist-table-container">
-          <table class="pricing-table product-table" id="productDatabaseTable">
-            <thead>
-              <tr>
-                <th style="width: 120px;">SKU</th>
-                <th>Produto</th>
-                <th style="width: 150px;">Marca</th>
-                <th style="width: 150px;">Categoria</th>
-                <th style="width: 120px; text-align: right;">Custo Base</th>
-                <th style="width: 80px; text-align: center;">Unid.</th>
-                <th style="width: 80px; text-align: center;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="productContainer">
-              <tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhum produto cadastrado no catálogo.</td></tr>
-            </tbody>
-          </table>
+
+        <div id="supplierComparisonContainer" class="dashboard-shell">
+          <div class="dashboard-empty">Nenhum comparativo disponível. Cadastre fornecedores vinculados a produtos primeiro.</div>
+        </div>
+      </div>
+
+      <div class="sub-content" data-subcontent="supplier-reports" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>Relatórios</h2>
+            <p>Indicadores consolidados da base de fornecedores e das cotações do catálogo.</p>
+          </div>
+          <div class="dashboard-kpis" style="margin-top:12px;">
+            <div class="dashboard-kpi">
+              <span>Produtos no catálogo</span>
+              <strong id="supplierReportProductsCount">0</strong>
+              <small>Total de itens cadastrados</small>
+            </div>
+            <div class="dashboard-kpi">
+              <span>Fornecedores distintos</span>
+              <strong id="supplierReportSuppliersCount">0</strong>
+              <small>Com documento ou nome únicos</small>
+            </div>
+            <div class="dashboard-kpi">
+              <span>Média de cotações</span>
+              <strong id="supplierReportAverageQuotes">0,0</strong>
+              <small>Por produto cotado</small>
+            </div>
+            <div class="dashboard-kpi">
+              <span>Produtos sem cotação</span>
+              <strong id="supplierReportUncoveredCount">0</strong>
+              <small>Itens ainda sem fornecedor vinculado</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-panel">
+          <div class="dashboard-panel-header">
+            <h3>Ranking de fornecedores</h3>
+            <p>Fornecedores com mais ocorrências de melhor preço no catálogo.</p>
+          </div>
+          <div id="supplierReportsContainer" class="dashboard-list">
+            <div class="dashboard-empty">Ainda não há dados suficientes para gerar relatórios.</div>
+          </div>
         </div>
       </div>
 

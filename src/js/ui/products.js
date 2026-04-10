@@ -83,6 +83,7 @@ export function setupProducts() {
         showNotification('Produto removido com sucesso!', 'success');
         renderProducts(searchInput ? searchInput.value : '');
         updateProductSuggestions();
+        window.dispatchEvent(new CustomEvent('products:updated'));
     }
 
     // Eventos
@@ -128,6 +129,7 @@ export function setupProducts() {
             modal.style.display = 'none';
             renderProducts(searchInput.value);
             updateProductSuggestions();
+            window.dispatchEvent(new CustomEvent('products:updated'));
         });
     }
 

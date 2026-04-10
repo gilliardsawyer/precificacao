@@ -19,6 +19,7 @@ import {
   setupEmpenho, setupEditalAnalysis, renderPriceSuggestions, setupPdfGenerator
 } from './ui/advancedFeatures.js';
 import { setupProducts } from './ui/products.js';
+import { setupSuppliersHub } from './ui/suppliers.js';
 
 // Incializar autenticação, passando o renderAll global como callback fallback
 initAuth(() => renderAll());
@@ -37,6 +38,7 @@ setupEmpenho(getActiveWorkbook, updateActiveWorkbook);
 setupEditalAnalysis();
 setupPdfGenerator(getActiveWorkbook);
 setupProducts();
+setupSuppliersHub();
 setupNavigation();
 
 // Renderizar módulos de dados ao clicar nas abas

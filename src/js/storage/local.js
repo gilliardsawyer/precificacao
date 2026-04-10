@@ -253,3 +253,29 @@ export function updateProducts(updater) {
   return nextProducts;
 }
 
+// ============================================================================
+// FORNECEDORES POR PRODUTO
+// ============================================================================
+
+export function loadProductSuppliers() {
+  try {
+    return JSON.parse(localStorage.getItem(CONFIG.STORAGE.PRODUCT_SUPPLIERS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveProductSuppliers(relations) {
+  try {
+    localStorage.setItem(CONFIG.STORAGE.PRODUCT_SUPPLIERS_KEY, JSON.stringify(relations));
+  } catch (error) {
+    console.error("Erro ao salvar fornecedores por produto:", error);
+  }
+}
+
+export function updateProductSuppliers(updater) {
+  const relations = loadProductSuppliers();
+  const nextRelations = updater(relations);
+  saveProductSuppliers(nextRelations);
+  return nextRelations;
+}
