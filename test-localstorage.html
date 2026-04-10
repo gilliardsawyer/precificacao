@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Teste localStorage</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .result { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <h1>Teste de localStorage</h1>
+  
+  <div id="results"></div>
+  
+  <script>
+    const results = document.getElementById('results');
+    
+    function test(name, fn) {
+      try {
+        fn();
+        results.innerHTML += `<div class="result success">✓ ${name}</div>`;
+      } catch (e) {
+        results.innerHTML += `<div class="result error">✗ ${name}: ${e.message}</div>`;
+      }
+    }
+    
+    test("localStorage disponível", () => {
+      if (typeof localStorage === 'undefined') throw new Error("localStorage não definido");
+    });
+    
+    test("Escrever no localStorage", () => {
+      localStorage.setItem('test-key', 'test-value');
+    });
+    
+    test("Ler do localStorage", () => {
+      const val = localStorage.getItem('test-key');
+      if (val !== 'test-value') throw new Error(`Valor esperado 'test-value', recebido '${val}'`);
+    });
+    
+    test("Escrever JSON complexo", () => {
+      const obj = {
+        id: crypto.randomUUID(),
+        items: [{name: 'item1'}, {name: 'item2'}]
+      };
+      localStorage.setItem('test-json', JSON.stringify(obj));
+    });
+    
+    test("Ler JSON complexo", () => {
+      const json = localStorage.getItem('test-json');
+      const obj = JSON.parse(json);
+      if (!obj.id) throw new Error("ID não encontrado");
+      if (obj.items.length !== 2) throw new Error("Items não salvos corretamente");
+    });
+    
+    test("Limpar localStorage", () => {
+      localStorage.removeItem('test-key');
+      localStorage.removeItem('test-json');
+    });
+    
+    results.innerHTML += `<div class="result"><strong>localStorage funcionando!</strong></div>`;
+  </script>
+</body>
+</html>

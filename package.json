@@ -1,0 +1,24 @@
+{
+  "name": "precificacao",
+  "version": "1.0.0",
+  "description": "Sistema web simples para precificacao de produtos em licitacao publica, feito em HTML, CSS e JavaScript puro.",
+  "main": "app.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^8.0.7",
+    "vitest": "^4.1.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0",
+    "sortablejs": "^1.15.7"
+  }
+}

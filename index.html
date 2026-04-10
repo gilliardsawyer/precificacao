@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planilha de Precificacao</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <nav class="side-nav no-print">
+      <div class="nav-item active" data-nav="pricing" title="Precificação"><span class="icon">💰</span></div>
+      <div class="nav-item" data-nav="management" title="Gestão do Processo"><span class="icon">📄</span></div>
+      <div class="nav-item" data-nav="logistics" title="Logística e Cubagem"><span class="icon">🚚</span></div>
+      <div class="nav-item" data-nav="analytics" title="Concorrência e Mercado"><span class="icon">🥇</span></div>
+      <div class="nav-item" data-nav="financial" title="Financeiro"><span class="icon">💳</span></div>
+      <div class="nav-item" data-nav="ai" title="Inteligência Artificial"><span class="icon">🤖</span></div>
+    </nav>
+
+    <main class="workspace" id="printArea">
+      <header class="topbar no-print">
+        <div></div>
+        <div class="topbar-actions">
+          <span class="status-pill" id="autosaveStatus" role="status">Salvo localmente</span>
+          <button type="button" id="openScenariosBtn" class="ghost-button">🎛️ Cenários</button>
+          <button type="button" id="openCalcBtn" class="ghost-button">⚔️ Modo disputa</button>
+          <button type="button" id="generatePdfBtn" class="ghost-button">📄 Proposta PDF</button>
+          <button type="button" id="navbarLoginBtn" class="ghost-button">☁️ Nuvem Off</button>
+        </div>
+      </header>
+
+      <!-- MÓDULO: PRECIFICAÇÃO (TABELA PRINCIPAL) -->
+      <section id="module-pricing" class="module-content module-active">
+        <div class="pricing-hero no-print" style="margin-bottom: 16px;">
+          <p class="eyebrow">Precificacao para licitacao publica</p>
+          <h1>Planilha completa de formacao de preco</h1>
+        </div>
+        <div class="horizontal-menu no-print" style="margin-bottom: 12px; display: grid; grid-template-columns: 280px 300px 1fr; gap: 12px; align-items: start;">
+          <!-- 1. GERENCIAR -->
+          <section class="card">
+            <div class="section-title">
+              <h2>Gerenciar Planilhas</h2>
+              <p>Selecione ou duplique processos.</p>
+            </div>
+            <div class="selector-row" style="display: flex; gap: 8px; margin-top: 8px;">
+              <select id="sheetSelector" class="search-input" style="flex:1; padding: 6px;"></select>
+              <button type="button" id="duplicateSheetButton" class="ghost-button" style="padding: 6px 10px;">Copia</button>
+              <button type="button" id="newSheetButton" class="primary-button" style="padding: 6px 10px;">Nova</button>
+            </div>
+          </section>
+
+          <!-- 2. PARÂMETROS -->
+          <section class="card">
+            <div class="section-title">
+              <h2>Parâmetros Globais (%)</h2>
+              <p>Valores padrão.</p>
+            </div>
+            <form id="settingsForm" class="compact-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px;">
+              <label style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Imposto</span>
+                <input type="number" id="taxPercent" min="0" max="100" step="0.01" style="padding: 4px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Margem</span>
+                <input type="number" id="marginPercent" min="0" max="100" step="0.01" style="padding: 4px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Transp.</span>
+                <input type="number" id="transportPercent" min="0" max="100" step="0.01" style="padding: 4px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Garantia</span>
+                <input type="number" id="warrantyPercent" min="0" max="100" step="0.01" style="padding: 4px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 2px; grid-column: 1 / -1;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Alerta lucro mínimo (%)</span>
+                <input type="number" id="minimumProfitAlert" min="0" max="100" step="0.01" style="padding: 4px;">
+              </label>
+              <button type="submit" class="hidden" id="saveSettingsButton">Salvar</button>
+            </form>
+          </section>
+
+          <!-- 3. DADOS DA LICITAÇÃO -->
+          <section class="card bid-card">
+            <div class="section-title">
+              <h2>Dados da Licitação</h2>
+              <p>Cabeçalho da proposta.</p>
+            </div>
+            <form id="bidForm" class="grid-form" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px;">
+              <label style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Proposta</span>
+                <input type="text" id="sheetName" placeholder="Título" style="padding: 4px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Processo</span>
+                <input type="text" id="processNumber" placeholder="PE 001/24" style="padding: 4px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Órgão</span>
+                <input type="text" id="agencyName" placeholder="Prefeitura" style="padding: 4px;">
+              </label>
+              <label class="full-span" style="grid-column: span 2; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Objeto</span>
+                <input type="text" id="bidObject" placeholder="Descrição resumida" style="padding: 4px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Data</span>
+                <input type="date" id="bidDate" style="padding: 4px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.75rem; opacity: 0.8;">Validade</span>
+                <input type="text" id="proposalValidity" placeholder="60 dias" style="padding: 4px;">
+              </label>
+            </form>
+          </section>
+        </div>
+
+        <section class="card proposal-form-card no-print">
+          <div class="section-title">
+            <h2>Dados do Proponente</h2>
+            <p>Essas informações alimentam a proposta comercial em PDF.</p>
+          </div>
+          <form id="proposalForm" class="proposal-form-grid" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px;">
+            <label style="display: flex; flex-direction: column; gap: 2px; grid-column: span 2;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">Razão Social</span>
+              <input type="text" id="companyName" placeholder="Sua empresa Ltda." style="padding: 4px;">
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">CNPJ</span>
+              <input type="text" id="companyDocument" placeholder="00.000.000/0001-00" style="padding: 4px;">
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">Inscrição Estadual</span>
+              <input type="text" id="stateRegistration" placeholder="ISENTO" style="padding: 4px;">
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 2px; grid-column: span 2;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">Endereço</span>
+              <input type="text" id="companyAddress" placeholder="Rua Exemplo, 123 - Bairro" style="padding: 4px;">
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">Cidade/UF</span>
+              <input type="text" id="companyCityState" placeholder="Salvador/BA" style="padding: 4px;">
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">Telefone</span>
+              <input type="text" id="companyPhone" placeholder="(71) 99999-9999" style="padding: 4px;">
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">E-mail</span>
+              <input type="email" id="companyEmail" placeholder="contato@empresa.com.br" style="padding: 4px;">
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">Responsável</span>
+              <input type="text" id="responsibleName" placeholder="Nome do responsável" style="padding: 4px;">
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 2px; grid-column: span 3;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">Texto de apresentação</span>
+              <input type="text" id="proposalIntro" placeholder="Apresentamos nossa proposta comercial para atendimento do objeto licitado." style="padding: 4px;">
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 2px; grid-column: 1 / -1;">
+              <span style="font-size: 0.75rem; opacity: 0.8;">Condições comerciais</span>
+              <textarea id="commercialTerms" rows="2" placeholder="Prazo de entrega, garantias adicionais, condições de pagamento ou observações institucionais." style="padding: 6px;"></textarea>
+            </label>
+          </form>
+        </section>
+
+
+    <section class="sheet">
+      <div class="sheet-main">
+        <div class="section-title">
+          <h2>Itens da proposta</h2>
+          <p>Edite direto na grade, acompanhe alertas de margem e prepare a impressao ou exportacao.</p>
+        </div>
+
+        <section class="utility-bar no-print">
+          <label class="toolbar-field">
+            <span>Busca rapida</span>
+            <input type="search" id="quickSearch" placeholder="Buscar por produto, marca/modelo ou fornecedor">
+          </label>
+          <label class="toolbar-field">
+            <span>Comparar com</span>
+            <select id="compareSheetSelector">
+              <option value="">Sem comparacao</option>
+            </select>
+          </label>
+          <label class="toolbar-field">
+            <span>Duplicar lote</span>
+            <select id="lotSelector">
+              <option value="">Escolha um lote</option>
+            </select>
+          </label>
+          <button type="button" id="duplicateLotButton" class="ghost-button">Duplicar lote</button>
+        </section>
+
+        <div class="proposal-cover only-print">
+          <div class="proposal-cover-main">
+            <p class="proposal-kicker">PROPOSTA COMERCIAL</p>
+            <h2 id="printSheetName">Planilha de Precificacao</h2>
+            <p id="printProposalIntro">Apresentamos nossa proposta comercial para atendimento do objeto licitado.</p>
+          </div>
+          <div class="proposal-cover-meta">
+            <div class="proposal-meta-card">
+              <span>Processo</span>
+              <strong id="printProcessNumber">-</strong>
+            </div>
+            <div class="proposal-meta-card">
+              <span>Órgão</span>
+              <strong id="printAgencyName">-</strong>
+            </div>
+            <div class="proposal-meta-card">
+              <span>Data da proposta</span>
+              <strong id="printBidDate">-</strong>
+            </div>
+            <div class="proposal-meta-card">
+              <span>Validade</span>
+              <strong id="printProposalValidity">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="print-bidder-info only-print">
+          <div class="bidder-header">
+            <div class="print-section-title">
+              <strong>PROPONENTE</strong>
+              <span>Dados institucionais da empresa participante</span>
+            </div>
+            <div class="bidder-grid">
+              <p><strong>Razão Social:</strong> <span id="printCompanyName">-</span></p>
+              <p><strong>CNPJ:</strong> <span id="printCompanyDocument">-</span></p>
+              <p><strong>Inscrição Estadual:</strong> <span id="printStateRegistration">-</span></p>
+              <p><strong>Responsável:</strong> <span id="printResponsibleName">-</span></p>
+              <p><strong>Telefone:</strong> <span id="printCompanyPhone">-</span></p>
+              <p><strong>E-mail:</strong> <span id="printCompanyEmail">-</span></p>
+              <p class="bidder-grid-full"><strong>Endereço:</strong> <span id="printCompanyAddress">-</span></p>
+              <p><strong>Cidade/UF:</strong> <span id="printCompanyCityState">-</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="print-header only-print">
+          <div class="print-section-title">
+            <strong>DADOS DA LICITAÇÃO</strong>
+            <span>Resumo executivo da proposta e do processo</span>
+          </div>
+          <div class="print-grid">
+            <p><strong>Processo:</strong> <span id="printHeaderProcessNumber">-</span></p>
+            <p><strong>Órgão:</strong> <span id="printHeaderAgencyName">-</span></p>
+            <p><strong>Data:</strong> <span id="printHeaderBidDate">-</span></p>
+            <p><strong>Validade:</strong> <span id="printHeaderProposalValidity">-</span></p>
+            <p class="print-object"><strong>Objeto:</strong> <span id="printBidObject">-</span></p>
+          </div>
+        </div>
+
+        <div class="proposal-summary only-print">
+          <div class="print-section-title">
+            <strong>RESUMO COMERCIAL</strong>
+            <span>Indicadores gerais da proposta</span>
+          </div>
+          <div class="proposal-summary-grid">
+            <div class="proposal-summary-card">
+              <span>Total da proposta</span>
+              <strong id="printGrandTotal">R$ 0,00</strong>
+            </div>
+            <div class="proposal-summary-card">
+              <span>Itens</span>
+              <strong id="printTotalItems">0</strong>
+            </div>
+            <div class="proposal-summary-card">
+              <span>Lotes</span>
+              <strong id="printLotCount">0</strong>
+            </div>
+            <div class="proposal-summary-card">
+              <span>Margem média</span>
+              <strong id="printProfitPercent">0,00%</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="proposal-terms only-print">
+          <div class="print-section-title">
+            <strong>CONDIÇÕES COMERCIAIS</strong>
+            <span>Informações complementares da proposta</span>
+          </div>
+          <p id="printCommercialTerms">Sem condições comerciais adicionais informadas.</p>
+        </div>
+
+        <div class="table-scroll">
+          <table class="pricing-table" id="pricingTable" role="grid" aria-label="Grade de precificacao de itens da proposta">
+            <thead>
+              <tr role="row">
+                <th class="group-base action-cell no-print" role="columnheader"><input type="checkbox" id="selectAllItems" title="Selecionar todos"></th>
+                <th class="group-base no-print" role="columnheader">Lote</th>
+                <th class="group-base" role="columnheader">Produto</th>
+                <th class="group-base" role="columnheader">Marca/Modelo</th>
+                <th class="group-base no-print" role="columnheader">Fornecedor</th>
+                <th class="group-base" role="columnheader">Qtd.</th>
+                <th class="group-base no-print" role="columnheader">Custo Compra</th>
+                <th class="group-base no-print" role="columnheader">Custo Total</th>
+                <th class="group-percent no-print" role="columnheader">Imposto %</th>
+                <th class="group-percent no-print" role="columnheader">Margem %</th>
+                <th class="group-logistics no-print" role="columnheader">Transporte %</th>
+                <th class="group-warranty no-print" role="columnheader">Garantia %</th>
+                <th class="group-markup detail-column no-print" role="columnheader">Mark-up</th>
+                <th class="group-minimum no-print" role="columnheader">Valor Minimo</th>
+                <th class="group-final" role="columnheader">Valor Unit. Final</th>
+                <th class="group-discount no-print" role="columnheader">Desc. Max. %</th>
+                <th class="group-final" role="columnheader">Valor Total Final</th>
+                <th class="group-tax detail-column no-print" role="columnheader">Valor Imposto</th>
+                <th class="group-logistics detail-column no-print" role="columnheader">Valor Transporte</th>
+                <th class="group-warranty detail-column no-print" role="columnheader">Valor Garantia</th>
+                <th class="group-margin no-print" role="columnheader">Lucro R$</th>
+                <th class="group-margin no-print" role="columnheader">Lucro %</th>
+                <th class="group-action no-print" role="columnheader">Acoes</th>
+              </tr>
+            </thead>
+            <tbody id="itemsTableBody"></tbody>
+            <tfoot>
+              <tr>
+                <td class="group-base no-print"></td>
+                <td class="group-base no-print">Total</td>
+                <td class="group-base">-</td>
+                <td class="group-base">-</td>
+                <td class="group-base no-print">-</td>
+                <td id="totalQuantity" class="group-base">0</td>
+                <td class="group-base no-print">-</td>
+                <td id="totalBaseValue" class="group-base no-print">R$ 0,00</td>
+                <td class="group-percent no-print">-</td>
+                <td class="group-percent no-print">-</td>
+                <td class="group-logistics no-print">-</td>
+                <td class="group-warranty no-print">-</td>
+                <td id="globalMarkupFoot" class="group-markup detail-column no-print">1,000000</td>
+                <td id="totalMinimumUnit" class="group-minimum no-print">R$ 0,00</td>
+                <td id="totalUnitFinal" class="group-final">R$ 0,00</td>
+                <td id="totalDiscountPercent" class="group-discount no-print">0,00%</td>
+                <td id="grandTotal" class="group-final">R$ 0,00</td>
+                <td id="totalTaxValue" class="group-tax detail-column no-print">R$ 0,00</td>
+                <td id="totalTransportValue" class="group-logistics detail-column no-print">R$ 0,00</td>
+                <td id="totalWarrantyValue" class="group-warranty detail-column no-print">R$ 0,00</td>
+                <td id="totalProfitValue" class="group-margin no-print">R$ 0,00</td>
+                <td id="totalProfitPercent" class="group-margin no-print">0,00%</td>
+                <td class="group-action no-print">-</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="print-signature only-print">
+          <div class="signature-grid">
+            <div class="signature-box">
+              <p>Esperamos que esta proposta atenda às suas expectativas. Estamos à disposição para quaisquer esclarecimentos.</p>
+              <div class="signature-line">
+                <span>LOCAL E DATA</span>
+                <div class="line"></div>
+              </div>
+              <div class="signature-line">
+                <span>ASSINATURA DO RESPONSÁVEL</span>
+                <div class="line"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section class="action-bar no-print">
+          <button type="button" id="newSheetBottomButton" class="secondary-button">Nova planilha</button>
+          <button type="button" id="importItemsButton" class="secondary-button">Importar CSV</button>
+          <button type="button" id="importXlsxButton" class="secondary-button">Importar XLSX</button>
+          <button type="button" id="exportExcelButton" class="secondary-button">Exportar Excel</button>
+          <button type="button" id="exportPdfButton" class="secondary-button">Exportar PDF</button>
+          <button type="button" id="backupButton" class="secondary-button">Backup</button>
+          <button type="button" id="restoreButton" class="secondary-button">Restaurar</button>
+          <button type="button" id="toggleAlertFilterButton" class="ghost-button">So alertas</button>
+          <button type="button" id="clearFiltersButton" class="ghost-button">Limpar filtros</button>
+          <button type="button" id="togglePrintModeButton" class="ghost-button">Modo impressao</button>
+          <button type="button" id="clearAllButton" class="ghost-button danger-button">Excluir planilha</button>
+          <input type="file" id="importFileInput" class="hidden" accept=".csv,.txt">
+          <input type="file" id="importXlsxInput" class="hidden" accept=".xlsx,.xls,.xlsm">
+          <input type="file" id="restoreFileInput" class="hidden" accept=".json">
+        </section>
+      </div>
+
+      <aside class="sheet-sidebar no-print">
+        <section class="card no-print">
+          <div class="section-title">
+            <h2>Novo item</h2>
+            <p>Cadastre o item e, se precisar, sobrescreva os percentuais globais.</p>
+          </div>
+
+          <form id="itemForm" class="stack-form">
+            <label>
+              <span>Lote/Grupo</span>
+              <input type="text" id="lotName" placeholder="Ex.: Lote 1" aria-label="Lote ou Grupo do item">
+            </label>
+            <label>
+              <span>Produto</span>
+              <input type="text" id="productName" placeholder="Ex.: Papel A4 caixa com 10 resmas" aria-label="Nome do produto" required>
+            </label>
+            <label>
+              <span>Marca/Modelo</span>
+              <input type="text" id="manufacturer" list="manufacturerSuggestions" placeholder="Ex.: Suzano Report Premium" aria-label="Marca ou modelo do produto">
+            </label>
+            <datalist id="manufacturerSuggestions"></datalist>
+            <label>
+              <span>Fornecedor</span>
+              <input type="text" id="supplier" list="supplierSuggestions" placeholder="Ex.: Distribuidora Alfa" aria-label="Fornecedor do item">
+            </label>
+            <datalist id="supplierSuggestions"></datalist>
+            <label>
+              <span>Quantidade</span>
+              <input type="number" id="quantity" min="1" step="1" value="1" aria-label="Quantidade a solicitar" required>
+            </label>
+            <label>
+              <span>Custo de compra unitario (R$)</span>
+              <input type="number" id="unitPrice" min="0" step="0.01" value="0" aria-label="Custo unitário de compra em reais" required>
+            </label>
+            <div class="subsection-title">Excecoes por item</div>
+            <div class="compact-grid">
+              <label>
+                <span>Imp. % item</span>
+                <input type="number" id="itemTaxPercent" min="0" max="100" step="0.01" placeholder="Padrao" aria-label="Percentual de imposto para este item">
+              </label>
+              <label>
+                <span>Margem % item</span>
+                <input type="number" id="itemMarginPercent" min="0" max="100" step="0.01" placeholder="Padrao" aria-label="Percentual de margem para este item">
+              </label>
+              <label>
+                <span>Transp. % item</span>
+                <input type="number" id="itemTransportPercent" min="0" max="100" step="0.01" placeholder="Padrao" aria-label="Percentual de transporte para este item">
+              </label>
+              <label>
+                <span>Garantia % item</span>
+                <input type="number" id="itemWarrantyPercent" min="0" max="100" step="0.01" placeholder="Padrao" aria-label="Percentual de garantia para este item">
+              </label>
+            </div>
+
+            <button type="submit" class="primary-button" id="saveItemButton">Salvar item</button>
+            <button type="button" id="cancelEditButton" class="ghost-button hidden">Cancelar edicao</button>
+          </form>
+        </section>
+
+        <section class="card summary-card">
+          <div class="section-title">
+            <h2>Resumo</h2>
+            <p>Leitura rapida da rentabilidade e composicao da proposta.</p>
+          </div>
+
+          <div class="summary-list">
+            <div class="summary-row">
+              <span>Somatorio de percentuais globais</span>
+              <strong id="sumPercent">0,00%</strong>
+            </div>
+            <div class="summary-row">
+              <span>Mark-up geral</span>
+              <strong id="globalMarkup">1,000000</strong>
+            </div>
+            <div class="summary-row">
+              <span>Base total dos itens</span>
+              <strong id="baseTotalResume">R$ 0,00</strong>
+            </div>
+            <div class="summary-row">
+              <span>Unitario minimo medio</span>
+              <strong id="minimumUnitResume">R$ 0,00</strong>
+            </div>
+            <div class="summary-row">
+              <span>Total final projetado</span>
+              <strong id="finalTotalResume">R$ 0,00</strong>
+            </div>
+            <div class="summary-row">
+              <span>Desconto maximo medio</span>
+              <strong id="discountPercentResume">0,00%</strong>
+            </div>
+            <div class="summary-row">
+              <span>Lucro real total</span>
+              <strong id="profitValueResume">R$ 0,00</strong>
+            </div>
+            <div class="summary-row">
+              <span>Lucro real medio</span>
+              <strong id="profitPercentResume">0,00%</strong>
+            </div>
+            <div class="summary-row">
+              <span>Lotes cadastrados</span>
+              <strong id="lotCount">0</strong>
+            </div>
+            <div class="summary-row alert-row">
+              <span>Itens em alerta</span>
+              <strong id="lowMarginCount">0</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="card no-print">
+          <div class="section-title">
+            <h2>Comparacao</h2>
+            <p>Veja a diferenca entre a planilha atual e outra planilha salva.</p>
+          </div>
+          <div id="compareSummary" class="compare-summary">
+            <div class="summary-row">
+              <span>Status</span>
+              <strong>Selecione uma planilha para comparar</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="card no-print">
+          <div class="section-title">
+            <h2>Resumo por lote</h2>
+            <p>Subtotais resumidos para revisao rapida.</p>
+          </div>
+          <div id="lotSummaryList" class="history-list"></div>
+        </section>
+
+        <section class="card no-print">
+          <div class="section-title">
+            <h2>Historico</h2>
+            <p>Ultimas versoes salvas automaticamente.</p>
+          </div>
+          <div id="versionHistory" class="history-list"></div>
+        </section>
+      </aside>
+    </section>
+  </section>
+
+  <!-- MÓDULO: LOGÍSTICA E CUBAGEM -->
+  <section id="module-logistics" class="module-content module-hidden no-print">
+    <div style="max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+
+      <!-- Configuração de Frete -->
+      <div class="card">
+        <div class="section-title">
+          <h2>🚚 Configuração de Frete</h2>
+          <p>Defina os parâmetros de custo logístico para este processo.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px;">
+          <label style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Frete por KG (R$)</span>
+            <input type="number" id="freightPerKg" min="0" step="0.01" placeholder="Ex: 12.00" class="search-input">
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Redespacho / Difícil Acesso (%)</span>
+            <input type="number" id="redespachoPercent" min="0" max="100" step="0.1" placeholder="Ex: 15" class="search-input">
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Fator de Cubagem</span>
+            <input type="number" id="cubageFactor" min="1" value="6000" step="1" class="search-input">
+          </label>
+          <div style="display: flex; align-items: flex-end;">
+            <button type="button" id="calcFreightBtn" class="primary-button" style="width: 100%;">Calcular Frete Total</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela de Itens com Cubagem -->
+      <div class="card">
+        <div class="section-title">
+          <h2>📦 Cadastro de Dimensões por Item</h2>
+          <p>Informe peso e medidas para o cálculo automático do peso volumétrico (cubagem).</p>
+        </div>
+        <div style="overflow-x: auto; margin-top: 12px;">
+          <table class="pricing-table" id="logisticsTable" style="min-width: 900px;">
+            <thead>
+              <tr>
+                <th>Item / Produto</th>
+                <th>Qtd.</th>
+                <th>Peso Real (kg)</th>
+                <th>Comprimento (cm)</th>
+                <th>Largura (cm)</th>
+                <th>Altura (cm)</th>
+                <th>Peso Cúbico (kg)</th>
+                <th>Peso Cobrado (kg)</th>
+                <th>Frete Item (R$)</th>
+              </tr>
+            </thead>
+            <tbody id="logisticsTableBody">
+              <tr><td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">Adicione itens na aba Precificação para calcular o frete.</td></tr>
+            </tbody>
+            <tfoot>
+              <tr style="font-weight: 700; background: var(--bg);">
+                <td colspan="7" style="text-align: right; padding: 8px 12px;">Total do Frete:</td>
+                <td id="logisticsTotalWeight" style="padding: 8px 12px;">0 kg</td>
+                <td id="logisticsTotalFreight" style="padding: 8px 12px; color: var(--primary);">R$ 0,00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Resumo de Custo Logístico -->
+      <div class="card">
+        <div class="section-title">
+          <h2>📊 Resumo do Custo Logístico</h2>
+          <p>Impacto do frete na proposta total.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px;">
+          <div style="background: var(--bg); padding: 16px; border-radius: var(--radius-sm); text-align: center;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Frete Base (sem redespacho)</div>
+            <div id="logisticsBaseFreight" style="font-size: 1.4rem; font-weight: 700; color: var(--primary);">R$ 0,00</div>
+          </div>
+          <div style="background: var(--bg); padding: 16px; border-radius: var(--radius-sm); text-align: center;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Custo de Redespacho</div>
+            <div id="logisticsRedespacho" style="font-size: 1.4rem; font-weight: 700; color: var(--warning);">R$ 0,00</div>
+          </div>
+          <div style="background: var(--bg); padding: 16px; border-radius: var(--radius-sm); text-align: center;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Frete Total (com redespacho)</div>
+            <div id="logisticsTotalCost" style="font-size: 1.4rem; font-weight: 700; color: var(--danger);">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- MÓDULO: RANKING DE CONCORRÊNCIA -->
+  <section id="module-analytics" class="module-content module-hidden no-print">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+
+      <!-- Configuração de Concorrentes -->
+      <div class="card">
+        <div class="section-title">
+          <h2>🥇 Inteligência de Concorrência</h2>
+          <p>Cadastre os preços unitários dos concorrentes por item para gerar o ranking de competitividade.</p>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: flex-end; margin-top: 12px;">
+          <label style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Nome do Concorrente</span>
+            <input type="text" id="competitorName" placeholder="Ex: Empresa Alpha Ltda" class="search-input">
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Fonte / Referência</span>
+            <input type="text" id="competitorSource" placeholder="Ex: Licitação PE 001/2025" class="search-input">
+          </label>
+          <button type="button" id="addCompetitorBtn" class="primary-button" style="height: 38px; padding: 0 20px;">+ Adicionar</button>
+        </div>
+        <!-- Lista de concorrentes cadastrados -->
+        <div id="competitorsList" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+      </div>
+
+      <!-- Tabela de Ranking por Item -->
+      <div class="card">
+        <div class="section-title">
+          <h2>📊 Ranking de Preços por Item</h2>
+          <p>Compare sua proposta com os concorrentes e veja onde ajustar para garantir o 1º lugar.</p>
+        </div>
+        <div style="overflow-x: auto; margin-top: 12px;">
+          <table class="pricing-table" id="rankingTable" style="min-width: 800px;">
+            <thead>
+              <tr id="rankingTableHeader">
+                <th style="min-width: 200px;">Item / Produto</th>
+                <th>Seu Preço (R$)</th>
+                <!-- Colunas de concorrentes serão inseridas dinamicamente -->
+                <th>Posição</th>
+                <th>Ajuste p/ 1º (R$)</th>
+              </tr>
+            </thead>
+            <tbody id="rankingTableBody">
+              <tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">Adicione itens e concorrentes para ver o ranking.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sugestões de Otimização -->
+      <div class="card">
+        <div class="section-title">
+          <h2>💡 Sugestões de Ajuste de Margem</h2>
+          <p>Itens onde sua proposta está acima do menor concorrente e você pode ganhar a disputa.</p>
+        </div>
+        <div id="rankingSuggestions" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="text-align: center; padding: 2rem; color: var(--text-muted);">Sem sugestões — cadastre concorrentes e itens para análise.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- MÓDULO: GESTÃO DO PROCESSO                         -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="module-management" class="module-content module-hidden no-print">
+    <div style="max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
+
+      <!-- Sub-Tabs -->
+      <div class="sub-tabs" data-group="management">
+        <button class="sub-tab active" data-subtab="checklist">✅ Checklist</button>
+        <button class="sub-tab" data-subtab="timeline">📅 Cronograma</button>
+        <button class="sub-tab" data-subtab="impugnacao">📝 Impugnação</button>
+        <button class="sub-tab" data-subtab="audit">🛡️ Auditoria</button>
+      </div>
+
+      <!-- SUB: Checklist de Habilitação -->
+      <div class="sub-content active" data-subcontent="checklist">
+        <div class="card">
+          <div class="section-title">
+            <h2>✅ Checklist de Habilitação</h2>
+            <p>Controle de documentos obrigatórios. Itens com vencimento próximo serão destacados.</p>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 120px 140px auto; gap: 8px; align-items: end; margin-top: 12px;">
+            <input type="text" id="checklistDocName" placeholder="Nome do documento (ex: CND Federal)" class="search-input">
+            <input type="date" id="checklistDocExpiry" class="search-input" title="Data de vencimento">
+            <select id="checklistDocStatus" class="search-input">
+              <option value="pending">⏳ Pendente</option>
+              <option value="ok">✅ OK</option>
+              <option value="expired">❌ Vencido</option>
+            </select>
+            <button type="button" id="addChecklistDocBtn" class="primary-button" style="height: 38px;">+ Add</button>
+          </div>
+          <div id="checklistContainer" style="margin-top: 16px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="text-align:center; padding:1.5rem; color:var(--text-muted)">Nenhum documento cadastrado.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Cronograma -->
+      <div class="sub-content" data-subcontent="timeline" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>📅 Cronograma do Pregão</h2>
+            <p>Registre os marcos do processo e acompanhe os prazos.</p>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 150px auto; gap: 8px; align-items: end; margin-top: 12px;">
+            <input type="text" id="timelineEventName" placeholder="Ex: Publicação do Edital" class="search-input">
+            <input type="date" id="timelineEventDate" class="search-input">
+            <button type="button" id="addTimelineEventBtn" class="primary-button" style="height: 38px;">+ Add</button>
+          </div>
+          <div id="timelineContainer" style="margin-top: 20px; display: flex; flex-direction: column; gap: 0; position: relative; padding-left: 24px; border-left: 3px solid var(--primary);">
+            <div style="text-align:center; padding:1.5rem; color:var(--text-muted)">Nenhum marco registrado.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Impugnação -->
+      <div class="sub-content" data-subcontent="impugnacao" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>📝 Gerador de Impugnação / Esclarecimento</h2>
+            <p>Preencha os campos e gere um documento formal para download.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+            <select id="impugnacaoType" class="search-input">
+              <option value="impugnacao">Impugnação ao Edital</option>
+              <option value="esclarecimento">Pedido de Esclarecimento</option>
+            </select>
+            <textarea id="impugnacaoText" rows="8" class="search-input" placeholder="Descreva o fundamento legal e fático da sua impugnação ou pedido..." style="resize: vertical;"></textarea>
+            <button type="button" id="generateImpugnacaoBtn" class="primary-button">📥 Gerar Documento (.txt)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Auditoria -->
+      <div class="sub-content" data-subcontent="audit" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>🛡️ Audit Log & Compliance</h2>
+            <p>Rastreio inalterável das ações realizadas nesta planilha, para fins de compliance.</p>
+          </div>
+          <div id="auditContainer" style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="text-align:center; padding:1.5rem; color:var(--text-muted)">Nenhuma alteração registrada nesta planilha ainda.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- MÓDULO: FINANCEIRO                                 -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="module-financial" class="module-content module-hidden no-print">
+    <div style="max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
+
+      <div class="sub-tabs" data-group="financial">
+        <button class="sub-tab active" data-subtab="payment">💸 Prazo Pagamento</button>
+        <button class="sub-tab" data-subtab="profitability">📊 Rentabilidade</button>
+        <button class="sub-tab" data-subtab="empenho">📋 Empenhos</button>
+      </div>
+
+      <!-- SUB: Simulador de Prazo de Pagamento -->
+      <div class="sub-content active" data-subcontent="payment">
+        <div class="card">
+          <div class="section-title">
+            <h2>💸 Simulador de Custo Financeiro</h2>
+            <p>Calcule o impacto real do prazo de pagamento do governo na sua margem.</p>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px;">
+            <label style="display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:0.8rem; color:var(--text-muted)">Prazo Médio (dias)</span>
+              <input type="number" id="paymentDays" value="60" min="0" class="search-input">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:0.8rem; color:var(--text-muted)">Taxa Mensal Capital (%)</span>
+              <input type="number" id="capitalRate" value="2.5" step="0.1" min="0" class="search-input">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:0.8rem; color:var(--text-muted)">Valor Total da Proposta (R$)</span>
+              <input type="number" id="paymentProposalValue" value="0" min="0" step="0.01" class="search-input">
+            </label>
+          </div>
+          <button type="button" id="calcPaymentCostBtn" class="primary-button" style="margin-top: 12px;">Calcular Custo Financeiro</button>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px;">
+            <div style="background: var(--bg); padding: 16px; border-radius: var(--radius-sm); text-align: center;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Custo Financeiro (R$)</div>
+              <div id="paymentFinancialCost" style="font-size: 1.4rem; font-weight: 700; color: var(--danger);">R$ 0,00</div>
+            </div>
+            <div style="background: var(--bg); padding: 16px; border-radius: var(--radius-sm); text-align: center;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">% sobre a Proposta</div>
+              <div id="paymentFinancialPercent" style="font-size: 1.4rem; font-weight: 700; color: var(--warning);">0,00%</div>
+            </div>
+            <div style="background: var(--bg); padding: 16px; border-radius: var(--radius-sm); text-align: center;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Lucro Líquido Estimado</div>
+              <div id="paymentNetProfit" style="font-size: 1.4rem; font-weight: 700; color: var(--green);">R$ 0,00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Rentabilidade por Órgão -->
+      <div class="sub-content" data-subcontent="profitability" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>📊 Dashboard de Rentabilidade</h2>
+            <p>Visão consolidada por órgão/processo a partir das planilhas salvas.</p>
+          </div>
+          <div id="profitabilityDashboard" style="margin-top: 12px;">
+            <div style="text-align:center; padding:2rem; color:var(--text-muted)">O dashboard será gerado automaticamente a partir das planilhas concluídas.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Controle de Empenho -->
+      <div class="sub-content" data-subcontent="empenho" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>📋 Controle de Empenhos</h2>
+            <p>Registre o ciclo pós-adjudicação para fechar o controle financeiro.</p>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px;">
+            <label style="display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:0.8rem; color:var(--text-muted)">Nº do Empenho</span>
+              <input type="text" id="empenhoNumber" placeholder="Ex: 2026NE000123" class="search-input">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:0.8rem; color:var(--text-muted)">Valor Adjudicado (R$)</span>
+              <input type="number" id="empenhoValue" min="0" step="0.01" class="search-input">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:0.8rem; color:var(--text-muted)">Data Prevista Entrega</span>
+              <input type="date" id="empenhoDeliveryDate" class="search-input">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:0.8rem; color:var(--text-muted)">Data Pagamento Recebido</span>
+              <input type="date" id="empenhoPaymentDate" class="search-input">
+            </label>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button type="button" id="saveEmpenhoBtn" class="primary-button">Salvar Empenho</button>
+          </div>
+          <div id="empenhoList" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="text-align:center; padding:1.5rem; color:var(--text-muted)">Nenhum empenho registrado.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- MÓDULO: INTELIGÊNCIA ARTIFICIAL                    -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="module-ai" class="module-content module-hidden no-print">
+    <div style="max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
+
+      <div class="sub-tabs" data-group="ai">
+        <button class="sub-tab active" data-subtab="edital-analysis">📑 Análise de Edital</button>
+        <button class="sub-tab" data-subtab="price-suggestion">💡 Sugestão de Preços</button>
+      </div>
+
+      <!-- SUB: Análise de Edital -->
+      <div class="sub-content active" data-subcontent="edital-analysis">
+        <div class="card">
+          <div class="section-title">
+            <h2>📑 Análise de Edital com IA</h2>
+            <p>Faça upload do PDF do edital para o Ollama (local) identificar riscos, prazos e requisitos.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end;">
+              <label style="display:flex; flex-direction:column; gap:4px">
+                <span style="font-size:0.8rem; color:var(--text-muted)">URL do Ollama</span>
+                <input type="text" id="ollamaUrl" value="http://localhost:11434" class="search-input">
+              </label>
+              <button type="button" id="testOllamaBtn" class="ghost-button" style="height: 38px;">🔗 Testar Conexão</button>
+            </div>
+            <div style="border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 2rem; text-align: center; cursor: pointer;" id="editalDropzone">
+              <span style="font-size: 2rem; display: block; margin-bottom: 8px;">📄</span>
+              <p style="margin: 0; color: var(--text-muted);">Arraste o PDF do edital aqui ou <strong>clique para selecionar</strong></p>
+              <input type="file" id="editalFileInput" accept=".pdf,.txt" style="display: none;">
+            </div>
+            <div id="editalAnalysisResult" style="display: none;" class="card" style="background: var(--bg);">
+              <div class="section-title"><h2>Resultado da Análise</h2></div>
+              <div id="editalAnalysisContent" style="white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Sugestão de Preços -->
+      <div class="sub-content" data-subcontent="price-suggestion" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>💡 Sugestão Inteligente de Preços</h2>
+            <p>Baseado no seu histórico de propostas, o sistema sugere preços competitivos para cada produto.</p>
+          </div>
+          <div id="priceSuggestionContainer" style="margin-top: 12px;">
+            <div style="text-align:center; padding:2rem; color:var(--text-muted)">
+              <span style="font-size: 2rem; display: block; margin-bottom: 8px;">🧠</span>
+              Cadastre mais propostas para gerar sugestões de preço baseadas em padrões anteriores.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+</div>
+
+  <template id="row-template">
+    <tr>
+      <td class="group-base action-cell no-print"><input type="checkbox" class="item-checkbox" data-inline="selectItem"></td>
+      <td class="group-base no-print">
+        <span class="only-print" data-print="lotName"></span>
+        <input class="no-print" data-inline="lotName" type="text">
+      </td>
+      <td class="group-base">
+        <span class="only-print" data-print="productName"></span>
+        <textarea class="no-print" data-inline="productName"></textarea>
+      </td>
+      <td class="group-base">
+        <span class="only-print" data-print="manufacturer"></span>
+        <input class="no-print" data-inline="manufacturer" type="text" list="manufacturerSuggestions">
+      </td>
+      <td class="group-base no-print">
+        <input class="no-print" data-inline="supplier" type="text" list="supplierSuggestions">
+      </td>
+      <td class="group-base">
+        <span class="only-print" data-print="quantity"></span>
+        <input class="no-print" data-inline="quantity" type="number" min="1" step="1">
+      </td>
+      <td class="group-base no-print">
+        <span class="only-print" data-print="unitPrice"></span>
+        <input class="no-print" data-inline="unitPrice" type="number" min="0" step="0.01">
+      </td>
+      <td class="group-base no-print" data-cell="baseTotal"></td>
+      <td class="group-percent no-print"><input data-inline="taxPercentOverride" type="number" min="0" max="100" step="0.01" placeholder="Padrao"></td>
+      <td class="group-percent no-print"><input data-inline="marginPercentOverride" type="number" min="0" max="100" step="0.01" placeholder="Padrao"></td>
+      <td class="group-logistics no-print"><input data-inline="transportPercentOverride" type="number" min="0" max="100" step="0.01" placeholder="Padrao"></td>
+      <td class="group-warranty no-print"><input data-inline="warrantyPercentOverride" type="number" min="0" max="100" step="0.01" placeholder="Padrao"></td>
+      <td class="group-markup detail-column no-print" data-cell="markup"></td>
+      <td class="group-minimum no-print" data-cell="minimumUnitPrice"></td>
+      <td class="group-final" data-cell="finalUnitPrice"></td>
+      <td class="group-discount no-print" data-cell="maximumDiscountPercent"></td>
+      <td class="group-final" data-cell="finalTotal"></td>
+      <td class="group-tax detail-column no-print" data-cell="taxValue"></td>
+      <td class="group-logistics detail-column no-print" data-cell="transportValue"></td>
+      <td class="group-warranty detail-column no-print" data-cell="warrantyValue"></td>
+      <td class="group-margin no-print" data-cell="profitValue"></td>
+      <td class="group-margin no-print" data-cell="profitPercent"></td>
+      <td class="group-action no-print action-cell">
+        <button type="button" class="table-button" data-action="edit">Editar</button>
+        <button type="button" class="table-button" data-action="duplicate">Duplicar</button>
+        <button type="button" class="table-button" data-action="delete">Excluir</button>
+      </td>
+    </tr>
+  </template>
+
+  <div id="massActionBar" class="mass-action-bar" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--border); box-shadow:var(--shadow-lg); padding:12px 24px; border-radius:100px; z-index:1000; align-items:center; gap:16px;">
+    <span id="massActionCount" style="font-weight:600; font-size:0.95rem; color:var(--text-main);">0 itens selecionados</span>
+    <div style="width:1px; height:24px; background:var(--border);"></div>
+    <select id="massActionField" class="search-input" style="height:36px; min-width:140px;">
+      <option value="">Escolha campo...</option>
+      <option value="taxPercentOverride">Imposto Global (%)</option>
+      <option value="marginPercentOverride">Margem Global (%)</option>
+      <option value="transportPercentOverride">Transporte Global (%)</option>
+      <option value="warrantyPercentOverride">Garantia Global (%)</option>
+    </select>
+    <input type="number" id="massActionValue" class="search-input" placeholder="Novo %" style="width:100px; height:36px;" />
+    <button type="button" class="primary-button" id="massActionApplyBtn" style="height:36px; padding:0 24px;">Aplicar</button>
+    <div style="width:1px; height:24px; background:var(--border);"></div>
+    <button type="button" class="ghost-button" id="massActionDeleteBtn" style="color:var(--danger); height:36px; padding:0 16px;">Apagar Lote</button>
+  </div>
+
+  <!-- CALCULADORA DE RECUO FLUTUANTE -->
+  <div id="floatingCalc" class="floating-calc no-print" style="display: none;">
+    <div class="calc-header">
+      <span>⚔️ Modo disputa</span>
+      <button type="button" class="close-calc" id="toggleCalcBtn">×</button>
+    </div>
+    <div class="calc-body">
+      <div class="calc-info">
+        <span class="label">Escopo da simulação</span>
+        <span id="calcScopeLabel" class="value">Planilha inteira</span>
+      </div>
+      <div class="calc-info">
+        <span class="label">Quantidade considerada</span>
+        <span id="calcTargetCount" class="value">0 unidade(s)</span>
+      </div>
+      <div class="calc-input-group">
+        <label>Tipo de lance</label>
+        <select id="calcModeSelect">
+          <option value="total">Lance total</option>
+          <option value="unit">Lance unitário</option>
+        </select>
+      </div>
+      <div class="calc-info">
+        <span class="label">Custo Mínimo Total</span>
+        <span id="calcMinCost" class="value">R$ 0,00</span>
+      </div>
+      <div class="calc-info">
+        <span class="label">Custo Mínimo Unitário</span>
+        <span id="calcMinUnitCost" class="value">R$ 0,00</span>
+      </div>
+      <div class="calc-input-group">
+        <label id="calcInputLabel">Seu próximo lance total (R$)</label>
+        <input type="number" id="calcLanceInput" placeholder="0,00" step="0.01">
+      </div>
+      <div class="calc-results">
+        <div class="result-item">
+          <span class="label">Lance Total Simulado</span>
+          <span id="calcBidTotal" class="value">R$ 0,00</span>
+        </div>
+        <div class="result-item">
+          <span class="label">Lance Unitário Simulado</span>
+          <span id="calcBidUnit" class="value">R$ 0,00</span>
+        </div>
+        <div class="result-item">
+          <span class="label">Lucro Real (R$)</span>
+          <span id="calcProfitValue" class="value">R$ 0,00</span>
+        </div>
+        <div class="result-item">
+          <span class="label">Margem Real (%)</span>
+          <span id="calcMarginPercent" class="value">0,00%</span>
+        </div>
+      </div>
+      <div id="calcStatus" class="calc-status">Aguardando lance...</div>
+    </div>
+  </div>
+
+
+  <div id="authModal" class="no-print" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items:center; justify-content:center;">
+    <div style="background: white; padding: 2rem; border-radius: 8px; width: 300px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px;">
+      <h3 style="margin: 0; font-size: 1.25rem;">Autenticação na Nuvem</h3>
+      <input type="email" id="authEmail" class="search-input" placeholder="Seu e-mail profissional" />
+      <input type="password" id="authPassword" class="search-input" placeholder="Sua senha" />
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <button type="button" id="closeAuthBtn" class="ghost-button" style="flex:1;">Cancelar</button>
+        <button type="button" id="authGoBtn" class="primary-button" style="flex:1;">Entrar / Cadastrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="importMappingModal" class="no-print" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items:center; justify-content:center;">
+    <div style="background: var(--surface); padding: 2rem; border-radius: 8px; width: 600px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-xl);">
+      <h3 style="margin: 0; font-size: 1.25rem; color:var(--text-main);">Mapear Colunas da Planilha</h3>
+      <p style="color:var(--text-muted); font-size:0.9rem;">Relacione as colunas lidas do seu arquivo com os campos do sistema.</p>
+      
+      <div id="mappingFieldsContainer" style="display:flex; flex-direction:column; gap:12px; background:var(--bg); padding:1rem; border-radius:8px;">
+        <!-- Javascript irá injetar os selects de mapeamento aqui -->
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div id="mappingTemplateHint" style="font-size:0.85rem; color:var(--text-muted);"></div>
+        <label style="display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" id="saveImportTemplateCheckbox" />
+          <span>Salvar este mapeamento como modelo</span>
+        </label>
+        <input
+          type="text"
+          id="importTemplateName"
+          class="search-input"
+          placeholder="Ex.: Planilha padrão do fornecedor Alfa"
+          style="display:none;"
+        />
+      </div>
+      
+      <div style="display: flex; justify-content:flex-end; gap: 10px; margin-top: 10px;">
+        <button type="button" id="cancelImportMapBtn" class="ghost-button" style="padding:0 20px;">Cancelar Importação</button>
+        <button type="button" id="confirmImportMapBtn" class="primary-button" style="padding:0 20px;">Concluir Importação</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
+  <script type="module" src="/src/js/main.js"></script>
+</body>
+</html>
