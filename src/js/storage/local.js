@@ -224,3 +224,32 @@ export function getAlertFilter() {
 export function setAlertFilter(value) {
   localStorage.setItem(CONFIG.STORAGE.ALERT_FILTER_KEY, String(value));
 }
+
+// ============================================================================
+// CATÁLOGO DE PRODUTOS
+// ============================================================================
+
+export function loadProducts() {
+  try {
+    return JSON.parse(localStorage.getItem(CONFIG.STORAGE.PRODUCTS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveProducts(products) {
+  try {
+    localStorage.setItem(CONFIG.STORAGE.PRODUCTS_KEY, JSON.stringify(products));
+    // Sincronização com nuvem para produtos pode ser adicionada aqui no futuro
+  } catch (error) {
+    console.error("Erro ao salvar produtos:", error);
+  }
+}
+
+export function updateProducts(updater) {
+  const products = loadProducts();
+  const nextProducts = updater(products);
+  saveProducts(nextProducts);
+  return nextProducts;
+}
+
