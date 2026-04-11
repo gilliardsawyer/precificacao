@@ -1540,7 +1540,7 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
 .dashboard-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--surface-alt);
   backdrop-filter: var(--glass-blur);
 }
 
@@ -1611,8 +1611,8 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   align-items: center;
   padding: 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: var(--surface-light);
+  border: 1px solid var(--border);
 }
 
 .dashboard-item strong {
@@ -1632,14 +1632,15 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
 .dashboard-metrics span {
   display: block;
   font-weight: 700;
-  color: var(--green-strong);
+  color: var(--primary);
 }
 
 .dashboard-empty {
   padding: 1.5rem;
   text-align: center;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--surface-alt);
+  border: 1px dashed var(--border);
   border-radius: 12px;
 }
 
