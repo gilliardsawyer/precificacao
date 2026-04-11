@@ -912,15 +912,15 @@ body.alert-filter .pricing-table tbody tr:not(.low-profit-row) {
   margin-top: 8px;
 }
 
-.pricing-table thead th {
+#pricingTable thead th {
   position: sticky;
   top: 0;
   z-index: 4;
 }
 
 /* Colunas Fixas (Sticky) */
-.pricing-table th:nth-child(1),
-.pricing-table td:nth-child(1) {
+#pricingTable th:nth-child(1),
+#pricingTable td:nth-child(1) {
   position: sticky;
   left: 0;
   z-index: 10;
@@ -931,8 +931,8 @@ body.alert-filter .pricing-table tbody tr:not(.low-profit-row) {
   border-right: 1px solid var(--border);
 }
 
-.pricing-table th:nth-child(2),
-.pricing-table td:nth-child(2) {
+#pricingTable th:nth-child(2),
+#pricingTable td:nth-child(2) {
   position: sticky;
   left: 50px;
   z-index: 9;
@@ -940,19 +940,19 @@ body.alert-filter .pricing-table tbody tr:not(.low-profit-row) {
   border-right: 1px solid var(--border);
 }
 
-.pricing-table thead th:nth-child(1),
-.pricing-table thead th:nth-child(2) {
+#pricingTable thead th:nth-child(1),
+#pricingTable thead th:nth-child(2) {
   z-index: 11;
   background-color: #0a0f1e !important;
   border-bottom: 2px solid var(--primary);
 }
 
-.pricing-table td.group-base:nth-child(1),
-.pricing-table td.group-base:nth-child(2) {
+#pricingTable td.group-base:nth-child(1),
+#pricingTable td.group-base:nth-child(2) {
   background-color: #020617 !important;
 }
 
-.pricing-table tfoot td {
+#pricingTable tfoot td {
   position: sticky;
   bottom: 0;
   z-index: 1;
