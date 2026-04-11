@@ -33,6 +33,18 @@ export function createDefaultWorkbook(name = "") {
       warrantyPercent: 0,
       minimumProfitAlert: 8
     },
+    logistics: {
+      freightPerKg: 0,
+      redespachoPercent: 0,
+      cubageFactor: 6000,
+      scenario: "unitario",
+      destinationCity: "",
+      destinationState: "",
+      destinationZip: "",
+      desiredDeadlineDays: 0,
+      urgency: "normal",
+      history: []
+    },
     items: [],
     versions: [],
     manufacturers: [],
@@ -48,6 +60,7 @@ export function ensureWorkbookShape(workbook) {
     ...workbook,
     header: { ...base.header, ...(workbook.header || {}) },
     settings: { ...base.settings, ...(workbook.settings || {}) },
+    logistics: { ...base.logistics, ...(workbook.logistics || {}) },
     items: (workbook.items || []).map((item) => ({
       lotName: "",
       baseProductId: null,
@@ -64,6 +77,12 @@ export function ensureWorkbookShape(workbook) {
       marginPercentOverride: null,
       transportPercentOverride: null,
       warrantyPercentOverride: null,
+      weightKg: 0,
+      dimLength: 0,
+      dimWidth: 0,
+      dimHeight: 0,
+      packagingType: "",
+      unitsPerPackage: 1,
       ...item,
       id: String(item.id || crypto.randomUUID())
     })),
@@ -162,6 +181,7 @@ export function buildSnapshot(workbook, label) {
     payload: {
       header: { ...workbook.header },
       settings: { ...workbook.settings },
+      logistics: { ...workbook.logistics },
       items: workbook.items.map((item) => ({ ...item })),
       manufacturers: [...(workbook.manufacturers || [])],
       suppliers: [...(workbook.suppliers || [])]
