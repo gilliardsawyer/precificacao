@@ -246,7 +246,12 @@ body[data-theme="light"] .nav-item:hover {
 
 body[data-theme="light"] .nav-item.active,
 body[data-theme="light"] .nav-item.active::after {
-  color: #ffffff;
+  color: #1e293b;
+}
+
+body[data-theme="light"] .nav-item.active {
+  border-color: rgba(183, 138, 20, 0.45);
+  box-shadow: 0 10px 24px rgba(183, 138, 20, 0.18);
 }
 
 .workspace {
@@ -1837,6 +1842,10 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   gap: 6px;
 }
 
+body[data-theme="light"] .checklist-actions-title {
+  color: var(--text-main);
+}
+
 .checklist-actions-buttons {
   display: flex;
   gap: 8px;
@@ -1885,6 +1894,11 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   gap: 8px;
 }
 
+body[data-theme="light"] .checklist-table-header {
+  background: rgba(226, 232, 240, 0.95);
+  color: var(--text-main);
+}
+
 .checklist-drag-alert {
   padding: 10px 16px;
   font-size: 0.85rem;
@@ -1903,6 +1917,14 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   overflow-x: auto;
 }
 
+body[data-theme="light"] .checklist-table-card {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+body[data-theme="light"] .checklist-table-container {
+  background: rgba(255, 255, 255, 0.78);
+}
+
 .checklist-table {
   width: 100%;
   border-collapse: collapse;
@@ -1917,6 +1939,11 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   border: none;
 }
 
+body[data-theme="light"] .checklist-table th {
+  background: rgba(241, 245, 249, 0.98) !important;
+  color: #334155;
+}
+
 .checklist-table td {
   padding: 12px 8px;
   border-bottom: 1px solid var(--border);
@@ -1924,6 +1951,11 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   vertical-align: middle;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+body[data-theme="light"] .checklist-table td {
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text-main);
 }
 
 /* Cores das linhas para os Status */
@@ -1960,6 +1992,11 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
 .badge-category.cat-societario { background: #14b8a6; }
 .badge-category.cat-tecnica { background: #f59e0b; }
 .badge-category.cat-outros { background: #64748b; }
+
+body[data-theme="light"] .badge-category.cat-outros {
+  background: #cbd5e1;
+  color: #1e293b;
+}
 
 .badge-status {
   padding: 4px 10px;
