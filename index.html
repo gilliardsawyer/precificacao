@@ -568,6 +568,45 @@
         </div>
       </div>
 
+      <div class="dashboard-shell">
+        <div class="section-title" style="margin-bottom: 0;">
+          <h2>📊 Resumo Logístico</h2>
+          <p>Leitura rápida do impacto de peso, volume, cubagem e custo estimado do processo.</p>
+        </div>
+        <div class="dashboard-kpis">
+          <div class="dashboard-kpi">
+            <span>Peso total cobrado</span>
+            <strong id="logisticsKpiChargedWeight">0,00 kg</strong>
+            <small>Soma do peso cobrado por item</small>
+          </div>
+          <div class="dashboard-kpi">
+            <span>Volume total</span>
+            <strong id="logisticsKpiVolume">0,000 m3</strong>
+            <small>Volume físico estimado do embarque</small>
+          </div>
+          <div class="dashboard-kpi">
+            <span>Cubagem total</span>
+            <strong id="logisticsKpiCubage">0,00 kg</strong>
+            <small>Peso cúbico acumulado</small>
+          </div>
+          <div class="dashboard-kpi">
+            <span>Volumes estimados</span>
+            <strong id="logisticsKpiVolumesCount">0</strong>
+            <small>Quantidade total de unidades / volumes</small>
+          </div>
+          <div class="dashboard-kpi">
+            <span>Frete estimado</span>
+            <strong id="logisticsKpiEstimatedFreight">R$ 0,00</strong>
+            <small>Inclui redespacho configurado</small>
+          </div>
+          <div class="dashboard-kpi">
+            <span>Modal sugerido</span>
+            <strong id="logisticsKpiSuggestedModal">A definir</strong>
+            <small id="logisticsKpiSuggestedModalHint">Preencha peso e medidas para sugestão</small>
+          </div>
+        </div>
+      </div>
+
       <!-- Tabela de Itens com Cubagem -->
       <div class="card">
         <div class="section-title">
