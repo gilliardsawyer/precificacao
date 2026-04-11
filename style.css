@@ -578,7 +578,9 @@ textarea:focus {
 }
 
 .summary-card {
-  background: linear-gradient(180deg, #f8fbf8, #eef6f0);
+  /* Mantém o card de resumo no mesmo padrão visual do sistema (tema escuro). */
+  background: var(--surface);
+  border-color: var(--border-strong);
 }
 
 .summary-list {
@@ -590,7 +592,7 @@ textarea:focus {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
   padding-bottom: 8px;
 }
 
