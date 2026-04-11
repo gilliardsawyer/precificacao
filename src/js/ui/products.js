@@ -1,5 +1,6 @@
 import { loadProducts, saveProducts, updateProducts, loadProductSuppliers, loadSuppliers } from '../storage/local.js';
 import { formatCurrency, escapeHtml, toNumber } from '../core/utils.js';
+import { getCategoryOptions, getUnitOptions, normalizeCategory, normalizeUnit } from '../core/catalogStandards.js';
 import { showNotification } from './toasts.js';
 
 /**
@@ -13,6 +14,10 @@ export function setupProducts() {
     const searchInput = document.getElementById('productSearchInput');
     const categoryFilter = document.getElementById('productCategoryFilter');
     const container = document.getElementById('productContainer');
+    const categoryInput = document.getElementById('prodCategory');
+    const unitInput = document.getElementById('prodUnit');
+    const categoryList = document.getElementById('productCategoryList');
+    const unitList = document.getElementById('productUnitList');
 
     if (!container) return;
 
@@ -82,11 +87,25 @@ export function setupProducts() {
         return '<span class="badge-category cat-outros">Sem cotação</span>';
     }
 
+    function renderStandards(products = loadProducts()) {
+        const categories = getCategoryOptions(products);
+        const units = getUnitOptions(products);
+
+        if (categoryList) {
+            categoryList.innerHTML = categories.map((category) => `<option value="${escapeHtml(category)}">`).join('');
+        }
+
+        if (unitList) {
+            unitList.innerHTML = units.map((unit) => `<option value="${escapeHtml(unit)}">`).join('');
+        }
+
+        return { categories, units };
+    }
+
     function renderCategoryFilter(products) {
         if (!categoryFilter) return;
         const current = categoryFilter.value || '';
-        const categories = [...new Set(products.map((p) => (p.category || '').trim()).filter(Boolean))]
-            .sort((a, b) => a.localeCompare(b));
+        const { categories } = renderStandards(products);
         categoryFilter.innerHTML = [
             '<option value="">Todas as categorias</option>',
             ...categories.map((cat) => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`)
@@ -125,7 +144,7 @@ export function setupProducts() {
                     return haystack.includes(searchTerm);
                 })
                 : false;
-            const matchCategory = !selectedCategory || (p.category || '').trim() === selectedCategory;
+            const matchCategory = !selectedCategory || normalizeCategory(p.category || '') === selectedCategory;
             return (matchName || matchLinked) && matchCategory;
         });
 
@@ -139,7 +158,7 @@ export function setupProducts() {
         container.innerHTML = filtered.map(product => `
             <tr data-product-id="${product.id}">
                 <td class="product-name-cell">${highlightHtml(product.name, term)}</td>
-                <td><span class="badge-category cat-outros">${highlightHtml(product.category || 'Geral', term)}</span></td>
+                <td><span class="badge-category cat-outros">${highlightHtml(normalizeCategory(product.category || 'Outros'), term)}</span></td>
                 <td style="text-align:center; font-weight:700;">${supplierStatsByProductId.get(product.id).supplierCount}</td>
                 <td class="product-cost">${supplierStatsByProductId.get(product.id).minPrice === null ? '—' : formatCurrency(supplierStatsByProductId.get(product.id).minPrice)}</td>
                 <td style="text-align:center;">${getQuoteBadge(supplierStatsByProductId.get(product.id).quoteStatus)}</td>
@@ -170,8 +189,8 @@ export function setupProducts() {
 
         document.getElementById('editingProdId').value = product.id;
         document.getElementById('prodName').value = product.name || '';
-        document.getElementById('prodCategory').value = product.category || '';
-        document.getElementById('prodUnit').value = product.unit || 'UN';
+        document.getElementById('prodCategory').value = normalizeCategory(product.category || '');
+        document.getElementById('prodUnit').value = normalizeUnit(product.unit || 'UN');
         document.getElementById('prodStatus').value = product.status || 'active';
         document.getElementById('prodDescription').value = product.technicalDescription || '';
 
@@ -200,6 +219,9 @@ export function setupProducts() {
             document.getElementById('saveProductBtn').textContent = 'Salvar no Catálogo';
             const statusEl = document.getElementById('prodStatus');
             if (statusEl) statusEl.value = 'active';
+            if (categoryInput) categoryInput.value = '';
+            if (unitInput) unitInput.value = 'UN';
+            renderStandards();
             modal.style.display = 'flex';
         });
     }
@@ -215,11 +237,13 @@ export function setupProducts() {
             e.preventDefault();
             
             const id = document.getElementById('editingProdId').value;
+            const normalizedCategory = normalizeCategory(document.getElementById('prodCategory').value);
+            const normalizedUnit = normalizeUnit(document.getElementById('prodUnit').value);
             const productData = {
                 id: id || Date.now().toString(),
                 name: document.getElementById('prodName').value.trim(),
-                category: document.getElementById('prodCategory').value.trim(),
-                unit: document.getElementById('prodUnit').value.trim(),
+                category: normalizedCategory || 'Outros',
+                unit: normalizedUnit || 'UN',
                 status: document.getElementById('prodStatus').value || 'active',
                 technicalDescription: document.getElementById('prodDescription').value.trim(),
                 updatedAt: new Date().toISOString()
@@ -235,11 +259,19 @@ export function setupProducts() {
 
             showNotification(id ? 'Produto atualizado!' : 'Produto cadastrado!', 'success');
             modal.style.display = 'none';
+            renderStandards();
             renderProducts(searchInput.value);
             updateProductSuggestions();
             window.dispatchEvent(new CustomEvent('products:updated'));
         });
     }
+
+    categoryInput?.addEventListener('blur', () => {
+        categoryInput.value = normalizeCategory(categoryInput.value);
+    });
+    unitInput?.addEventListener('blur', () => {
+        unitInput.value = normalizeUnit(unitInput.value);
+    });
 
     if (searchInput) {
         searchInput.addEventListener('input', () => {
@@ -253,6 +285,7 @@ export function setupProducts() {
     }
 
     // Inicializar Tabela
+    renderStandards();
     renderProducts();
     updateProductSuggestions();
     hookProductSelection();
