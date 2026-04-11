@@ -21,6 +21,8 @@ import {
 import { setupProducts } from './ui/products.js';
 import { setupSuppliersHub } from './ui/suppliers.js';
 
+const THEME_STORAGE_KEY = "precificacao-theme";
+
 // Incializar autenticação, passando o renderAll global como callback fallback
 initAuth(() => renderAll());
 setupMassEdit(() => renderAll());
@@ -39,6 +41,7 @@ setupEditalAnalysis();
 setupPdfGenerator(getActiveWorkbook);
 setupProducts();
 setupSuppliersHub();
+setupThemeToggle();
 setupNavigation();
 
 // Renderizar módulos de dados ao clicar nas abas
@@ -48,6 +51,44 @@ document.querySelector('[data-nav="financial"]')?.addEventListener('click', () =
 document.querySelector('[data-nav="ai"]')?.addEventListener('click', () => {
   setTimeout(() => { renderPriceSuggestions(getActiveWorkbook); }, 50);
 });
+
+function applyTheme(theme, persist = true) {
+  const nextTheme = theme === "light" ? "light" : "dark";
+  document.body.dataset.theme = nextTheme;
+  if (persist) {
+    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  }
+  updateThemeToggleButton(nextTheme);
+}
+
+function updateThemeToggleButton(theme) {
+  const button = document.getElementById("themeToggleBtn");
+  if (!button) return;
+  const icon = button.querySelector(".icon");
+  const nextTheme = theme === "light" ? "escuro" : "claro";
+  if (icon) {
+    icon.textContent = theme === "light" ? "🌙" : "☀️";
+  }
+  button.title = `Alternar para tema ${nextTheme}`;
+  button.setAttribute("aria-label", `Alternar para tema ${nextTheme}`);
+}
+
+function setupThemeToggle() {
+  const toggleButton = document.getElementById("themeToggleBtn");
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  const preferredTheme = savedTheme || (
+    window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark"
+  );
+
+  applyTheme(preferredTheme, false);
+
+  toggleButton?.addEventListener("click", () => {
+    const current = document.body.dataset.theme === "light" ? "light" : "dark";
+    const next = current === "light" ? "dark" : "light";
+    applyTheme(next);
+    showNotification(`Tema ${next === "light" ? "claro" : "escuro"} ativado.`, "info");
+  });
+}
 
 function setupNavigation() {
   const navItems = document.querySelectorAll(".nav-item");

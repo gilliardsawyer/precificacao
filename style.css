@@ -37,6 +37,37 @@
   --glass-blur: blur(24px) saturate(180%);
 }
 
+body[data-theme="light"] {
+  --primary: #b78a14;
+  --primary-hover: #966f09;
+  --primary-bg: rgba(183, 138, 20, 0.12);
+
+  --bg: #eef2f9;
+  --surface: rgba(255, 255, 255, 0.84);
+  --surface-alt: rgba(226, 232, 240, 0.82);
+  --surface-light: rgba(15, 23, 42, 0.04);
+
+  --border: rgba(148, 163, 184, 0.3);
+  --border-strong: rgba(183, 138, 20, 0.35);
+
+  --text-main: #0f172a;
+  --text-muted: #475569;
+
+  --green: #047857;
+  --green-strong: #047857;
+  --green-bg: rgba(4, 120, 87, 0.1);
+
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.1);
+
+  --warning: #d97706;
+  --warning-bg: rgba(217, 119, 6, 0.12);
+
+  --shadow-sm: 0 4px 10px -2px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 12px 24px -8px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 24px 40px -12px rgba(15, 23, 42, 0.18);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -59,6 +90,15 @@ body {
   position: relative;
 }
 
+body[data-theme="light"] {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(255, 255, 255, 0.95) 0, transparent 45%),
+    radial-gradient(at 100% 0%, rgba(254, 243, 199, 0.7) 0, transparent 40%),
+    radial-gradient(at 0% 100%, rgba(219, 234, 254, 0.85) 0, transparent 45%),
+    radial-gradient(at 100% 100%, rgba(255, 255, 255, 0.95) 0, transparent 42%);
+}
+
 /* Efeito de Textura Noise sutil para o fundo */
 body::before {
   content: "";
@@ -68,6 +108,10 @@ body::before {
   opacity: 0.04;
   pointer-events: none;
   z-index: -1; /* Movido para trás para não bloquear interação */
+}
+
+body[data-theme="light"]::before {
+  opacity: 0.02;
 }
 
 button,
@@ -111,6 +155,12 @@ mark.search-highlight {
   box-shadow: 5px 0 30px rgba(0, 0, 0, 0.8);
 }
 
+body[data-theme="light"] .side-nav {
+  background: rgba(255, 255, 255, 0.88);
+  border-right: 1px solid var(--border-strong);
+  box-shadow: 5px 0 30px rgba(15, 23, 42, 0.12);
+}
+
 .side-nav:hover {
   width: 280px; /* Mais largo para caber todo o texto do menu */
 }
@@ -134,6 +184,10 @@ mark.search-highlight {
   overflow: hidden;
   white-space: nowrap;
   pointer-events: auto; /* Garantir clique */
+}
+
+body[data-theme="light"] .nav-item {
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .nav-item span.icon {
@@ -171,6 +225,10 @@ mark.search-highlight {
   box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
 }
 
+body[data-theme="light"] .nav-item:hover {
+  background: rgba(183, 138, 20, 0.12);
+}
+
 .nav-item.active {
   background: linear-gradient(135deg, var(--primary), #b8960c);
   color: #020617;
@@ -180,6 +238,15 @@ mark.search-highlight {
 
 .nav-item.active::after {
   color: #020617;
+}
+
+.nav-utility {
+  margin-top: auto;
+}
+
+body[data-theme="light"] .nav-item.active,
+body[data-theme="light"] .nav-item.active::after {
+  color: #ffffff;
 }
 
 .workspace {
@@ -251,6 +318,10 @@ mark.search-highlight {
   width: calc(100% - 48px);
   margin-left: auto;
   margin-right: auto;
+}
+
+body[data-theme="light"] .topbar {
+  background: rgba(255, 255, 255, 0.76) !important;
 }
 
 .eyebrow {
@@ -392,6 +463,12 @@ textarea:focus {
   background: rgba(15, 23, 42, 0.9);
 }
 
+body[data-theme="light"] input:focus,
+body[data-theme="light"] select:focus,
+body[data-theme="light"] textarea:focus {
+  background: rgba(255, 255, 255, 0.96);
+}
+
 .primary-button,
 .secondary-button,
 .ghost-button,
@@ -500,6 +577,11 @@ textarea:focus {
   font-weight: 700;
   font-size: 0.62rem;
   border-bottom: 2px solid var(--primary);
+}
+
+body[data-theme="light"] .pricing-table th {
+  background: rgba(248, 250, 252, 0.95) !important;
+  color: #8a6505;
 }
 
 .pricing-table tbody tr {
@@ -931,6 +1013,11 @@ body.alert-filter .pricing-table tbody tr:not(.low-profit-row) {
   border-right: 1px solid var(--border);
 }
 
+body[data-theme="light"] #pricingTable th:nth-child(1),
+body[data-theme="light"] #pricingTable td:nth-child(1) {
+  background-color: #f8fafc !important;
+}
+
 #pricingTable th:nth-child(2),
 #pricingTable td:nth-child(2) {
   position: sticky;
@@ -940,6 +1027,11 @@ body.alert-filter .pricing-table tbody tr:not(.low-profit-row) {
   border-right: 1px solid var(--border);
 }
 
+body[data-theme="light"] #pricingTable th:nth-child(2),
+body[data-theme="light"] #pricingTable td:nth-child(2) {
+  background-color: #f8fafc !important;
+}
+
 #pricingTable thead th:nth-child(1),
 #pricingTable thead th:nth-child(2) {
   z-index: 11;
@@ -947,9 +1039,19 @@ body.alert-filter .pricing-table tbody tr:not(.low-profit-row) {
   border-bottom: 2px solid var(--primary);
 }
 
+body[data-theme="light"] #pricingTable thead th:nth-child(1),
+body[data-theme="light"] #pricingTable thead th:nth-child(2) {
+  background-color: #eef2ff !important;
+}
+
 #pricingTable td.group-base:nth-child(1),
 #pricingTable td.group-base:nth-child(2) {
   background-color: #020617 !important;
+}
+
+body[data-theme="light"] #pricingTable td.group-base:nth-child(1),
+body[data-theme="light"] #pricingTable td.group-base:nth-child(2) {
+  background-color: #f8fafc !important;
 }
 
 #pricingTable tfoot td {
