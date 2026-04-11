@@ -1637,6 +1637,37 @@ document.addEventListener("keydown", (event) => {
       saveItem(getItemFormData());
     }
   }
+
+  // Ctrl+K = Busca rápida (Fornecedores ou Precificação)
+  if (event.ctrlKey && (event.key === "k" || event.key === "K")) {
+    event.preventDefault();
+    const activeModule = document.querySelector(".module-content.module-active")?.id || "";
+    if (activeModule === "module-suppliers") {
+      // Ir para a aba "Produtos" e focar a busca única
+      document.querySelector('.sub-tabs[data-group="suppliers"] [data-subtab="supplier-products"]')?.click();
+      const input = document.getElementById("productSearchInput");
+      if (input) {
+        input.focus();
+        input.select?.();
+      }
+      return;
+    }
+
+    if (activeModule === "module-pricing") {
+      quickSearch?.focus();
+      quickSearch?.select?.();
+      return;
+    }
+
+    // Default: abrir Fornecedores e focar busca
+    document.querySelector('.nav-item[data-nav="suppliers"]')?.click();
+    document.querySelector('.sub-tabs[data-group="suppliers"] [data-subtab="supplier-products"]')?.click();
+    const input = document.getElementById("productSearchInput");
+    if (input) {
+      input.focus();
+      input.select?.();
+    }
+  }
   
   // Escape = Cancelar edição
   if (event.key === "Escape" && STATE.editingItemId) {

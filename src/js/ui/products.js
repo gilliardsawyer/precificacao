@@ -22,6 +22,20 @@ export function setupProducts() {
         return (value || '').toString().trim().toLowerCase();
     }
 
+    function highlightHtml(text, term) {
+        const source = (text || '').toString();
+        const query = (term || '').trim();
+        if (!query) return escapeHtml(source);
+        const escaped = escapeHtml(source);
+        const safe = escapeHtml(query);
+        try {
+            const re = new RegExp(`(${safe.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')})`, 'ig');
+            return escaped.replace(re, '<mark class="search-highlight">$1</mark>');
+        } catch {
+            return escaped;
+        }
+    }
+
     function getSupplierStats(productId) {
         const links = loadProductSuppliers().filter((entry) => entry.productId === productId);
         if (!links.length) {
@@ -83,14 +97,30 @@ export function setupProducts() {
         renderCategoryFilter(products);
         const selectedCategory = (categoryFilter?.value || '').trim();
 
+        const links = loadProductSuppliers();
+        const supplierIndexByProductId = new Map();
+        links.forEach((entry) => {
+            if (!entry.productId) return;
+            const list = supplierIndexByProductId.get(entry.productId) || [];
+            list.push(entry);
+            supplierIndexByProductId.set(entry.productId, list);
+        });
+
         const supplierStatsByProductId = new Map(
             products.map((product) => [product.id, getSupplierStats(product.id)])
         );
         
         const filtered = products.filter(p => {
             const matchName = (p.name || '').toLowerCase().includes(searchTerm);
+            const related = supplierIndexByProductId.get(p.id) || [];
+            const matchLinked = searchTerm
+                ? related.some((r) => {
+                    const haystack = `${r.supplierName || ''} ${r.brand || ''} ${r.model || ''}`.toLowerCase();
+                    return haystack.includes(searchTerm);
+                })
+                : false;
             const matchCategory = !selectedCategory || (p.category || '').trim() === selectedCategory;
-            return matchName && matchCategory;
+            return (matchName || matchLinked) && matchCategory;
         });
 
         if (filtered.length === 0) {
@@ -102,8 +132,8 @@ export function setupProducts() {
 
         container.innerHTML = filtered.map(product => `
             <tr data-product-id="${product.id}">
-                <td class="product-name-cell">${escapeHtml(product.name)}</td>
-                <td><span class="badge-category cat-outros">${escapeHtml(product.category || 'Geral')}</span></td>
+                <td class="product-name-cell">${highlightHtml(product.name, term)}</td>
+                <td><span class="badge-category cat-outros">${highlightHtml(product.category || 'Geral', term)}</span></td>
                 <td style="text-align:center; font-weight:700;">${supplierStatsByProductId.get(product.id).supplierCount}</td>
                 <td class="product-cost">${supplierStatsByProductId.get(product.id).minPrice === null ? '—' : formatCurrency(supplierStatsByProductId.get(product.id).minPrice)}</td>
                 <td style="text-align:center;">${getQuoteBadge(supplierStatsByProductId.get(product.id).quoteStatus)}</td>

@@ -6,6 +6,7 @@ export function setupSuppliersHub() {
   const module = document.getElementById('module-suppliers');
   if (!module) return;
 
+  const globalSearchInput = document.getElementById('productSearchInput');
   const form = document.getElementById('productSupplierForm');
   const tableBody = document.getElementById('productSupplierTableBody');
   const compareFilter = document.getElementById('supplierCompareProductFilter');
@@ -49,6 +50,24 @@ export function setupSuppliersHub() {
 
   function getProducts() {
     return loadProducts();
+  }
+
+  function getGlobalSearchTerm() {
+    return (globalSearchInput?.value || '').trim().toLowerCase();
+  }
+
+  function highlightHtml(text, term) {
+    const source = (text || '').toString();
+    const query = (term || '').trim();
+    if (!query) return escapeHtml(source);
+    const escaped = escapeHtml(source);
+    const safe = escapeHtml(query);
+    try {
+      const re = new RegExp(`(${safe.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')})`, 'ig');
+      return escaped.replace(re, '<mark class="search-highlight">$1</mark>');
+    } catch {
+      return escaped;
+    }
   }
 
   function getProductMap() {
@@ -99,6 +118,7 @@ export function setupSuppliersHub() {
     if (!tableBody) return;
 
     const productMap = getProductMap();
+    const term = getGlobalSearchTerm();
     const relations = [...loadProductSuppliers()].sort((a, b) => {
       const productCompare = getProductLabel(a, productMap).localeCompare(getProductLabel(b, productMap));
       if (productCompare !== 0) return productCompare;
@@ -110,25 +130,47 @@ export function setupSuppliersHub() {
       return;
     }
 
+    const filtered = term
+      ? relations.filter((relation) => {
+        const haystack = [
+          getProductLabel(relation, productMap),
+          relation.supplierName,
+          relation.supplierDocument,
+          relation.brand,
+          relation.model,
+          relation.warranty,
+          relation.proposalValidity,
+          relation.techCharacteristics,
+          relation.notes
+        ].join(' ').toLowerCase();
+        return haystack.includes(term);
+      })
+      : relations;
+
+    if (!filtered.length) {
+      tableBody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum vínculo encontrado para a busca atual.</td></tr>';
+      return;
+    }
+
     const meetsBadge = (value) => {
       if (value === false || value === 'no') return '<span class="badge-category cat-fiscal">Não</span>';
       if (value === true || value === 'yes') return '<span class="badge-category cat-societario">Sim</span>';
       return '<span class="badge-category cat-outros">—</span>';
     };
 
-    tableBody.innerHTML = relations.map((relation) => `
+    tableBody.innerHTML = filtered.map((relation) => `
       <tr data-product-supplier-id="${relation.id}">
-        <td>${escapeHtml(getProductLabel(relation, productMap))}</td>
-        <td>${escapeHtml(relation.supplierName || '—')}</td>
-        <td>${escapeHtml(`${relation.brand || '—'}${relation.model ? ` / ${relation.model}` : ''}`)}</td>
+        <td>${highlightHtml(getProductLabel(relation, productMap), term)}</td>
+        <td>${highlightHtml(relation.supplierName || '—', term)}</td>
+        <td>${highlightHtml(`${relation.brand || '—'}${relation.model ? ` / ${relation.model}` : ''}`, term)}</td>
         <td style="text-align:right;">${toNumber(relation.quotedPrice) > 0 ? formatCurrency(relation.quotedPrice) : '—'}</td>
         <td style="text-align:center;">${relation.leadTimeDays ? `${escapeHtml(String(relation.leadTimeDays))} dias` : '—'}</td>
         <td style="text-align:center;">${escapeHtml(relation.warranty || '—')}</td>
         <td style="text-align:center;">${escapeHtml(relation.proposalValidity || '—')}</td>
         <td style="text-align:center;">${meetsBadge(relation.meetsMinimum)}</td>
         <td style="text-align:center;">${escapeHtml(relation.quoteDate || '—')}</td>
-        <td>${escapeHtml(relation.techCharacteristics || '—')}</td>
-        <td>${escapeHtml(relation.notes || '—')}</td>
+        <td>${highlightHtml(relation.techCharacteristics || '—', term)}</td>
+        <td>${highlightHtml(relation.notes || '—', term)}</td>
         <td style="text-align:center; display:flex; gap:4px; justify-content:center;">
           <button type="button" class="product-action-btn edit" data-action="edit-product-supplier" data-id="${relation.id}" title="Editar">✏️</button>
           <button type="button" class="product-action-btn delete" data-action="delete-product-supplier" data-id="${relation.id}" title="Excluir">🗑️</button>
@@ -141,6 +183,7 @@ export function setupSuppliersHub() {
     if (!comparisonContainer || !compareTableBody) return;
 
     const selectedProductId = compareFilter?.value || '';
+    const term = getGlobalSearchTerm();
     const products = getProducts();
     const productMap = getProductMap();
     const product = products.find((p) => p.id === selectedProductId);
@@ -207,19 +250,28 @@ export function setupSuppliersHub() {
       const meets = !(offer.meetsMinimum === false || offer.meetsMinimum === 'no');
       const rowClass = `${isMin ? 'compare-row-min' : ''} ${meets ? 'compare-row-meets' : ''}`.trim();
       const priceClass = isMin ? 'compare-price-min' : '';
+      const show = !term || [
+        offer.supplierName,
+        offer.supplierDocument,
+        offer.brand,
+        offer.model,
+        offer.warranty,
+        offer.notes
+      ].join(' ').toLowerCase().includes(term);
+      if (!show) return '';
       return `
         <tr class="${rowClass}">
-          <td>${escapeHtml(offer.supplierName || '—')}</td>
-          <td>${escapeHtml(offer.brand || '—')}</td>
-          <td>${escapeHtml(offer.model || '—')}</td>
+          <td>${highlightHtml(offer.supplierName || '—', term)}</td>
+          <td>${highlightHtml(offer.brand || '—', term)}</td>
+          <td>${highlightHtml(offer.model || '—', term)}</td>
           <td style="text-align:right;" class="${priceClass}">${price > 0 ? formatCurrency(price) : '—'}</td>
           <td style="text-align:center;">${offer.leadTimeDays ? `${escapeHtml(String(offer.leadTimeDays))} dias` : '—'}</td>
-          <td style="text-align:center;">${escapeHtml(offer.warranty || '—')}</td>
+          <td style="text-align:center;">${highlightHtml(offer.warranty || '—', term)}</td>
           <td style="text-align:center;">${meetsBadge(offer.meetsMinimum)}</td>
-          <td>${escapeHtml(offer.notes || '—')}</td>
+          <td>${highlightHtml(offer.notes || '—', term)}</td>
         </tr>
       `;
-    }).join('') : '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum fornecedor vinculado a este produto ainda.</td></tr>';
+    }).join('').trim() || '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum fornecedor encontrado para a busca atual.</td></tr>' : '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum fornecedor vinculado a este produto ainda.</td></tr>';
   }
 
   function renderReports() {
@@ -421,6 +473,18 @@ export function setupSuppliersHub() {
   compareFilter?.addEventListener('change', renderComparison);
   fields.productId?.addEventListener('change', updateMinSuppliersWarning);
   window.addEventListener('products:updated', refreshAll);
+  globalSearchInput?.addEventListener('input', () => {
+    renderSupplierLinks();
+    renderComparison();
+    renderReports();
+    updateMinSuppliersWarning();
+  });
+  globalSearchInput?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      globalSearchInput.value = '';
+      globalSearchInput.dispatchEvent(new Event('input'));
+    }
+  });
 
   refreshAll();
   resetForm();

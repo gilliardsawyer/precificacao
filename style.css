@@ -81,6 +81,13 @@ textarea {
   resize: vertical;
 }
 
+mark.search-highlight {
+  background: rgba(212, 175, 55, 0.25);
+  color: var(--text-main);
+  padding: 0 2px;
+  border-radius: 4px;
+}
+
 .app-container {
   display: flex;
   min-height: 100vh;
