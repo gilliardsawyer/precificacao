@@ -259,6 +259,68 @@ export function updateProducts(updater) {
 }
 
 // ============================================================================
+// CADASTRO DE FORNECEDORES (GLOBAL)
+// ============================================================================
+
+export function loadSuppliers() {
+  try {
+    return JSON.parse(localStorage.getItem(CONFIG.STORAGE.SUPPLIERS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveSuppliers(suppliers) {
+  try {
+    localStorage.setItem(CONFIG.STORAGE.SUPPLIERS_KEY, JSON.stringify(suppliers));
+  } catch (error) {
+    console.error("Erro ao salvar fornecedores:", error);
+  }
+}
+
+export function updateSuppliers(updater) {
+  const suppliers = loadSuppliers();
+  const next = updater(suppliers);
+  saveSuppliers(next);
+  return next;
+}
+
+export function upsertSupplierByDocumentOrName(payload) {
+  const name = (payload?.name || "").trim();
+  const document = (payload?.document || "").trim();
+  const normalizedName = name.toLowerCase();
+  const normalizedDocument = document.toLowerCase();
+  if (!name) return null;
+
+  const suppliers = loadSuppliers();
+  const existing = suppliers.find((s) => {
+    const sameDoc = normalizedDocument && (s.document || "").trim().toLowerCase() === normalizedDocument;
+    const sameName = (s.name || "").trim().toLowerCase() === normalizedName;
+    return sameDoc || (!normalizedDocument && sameName);
+  });
+
+  if (existing) {
+    const next = suppliers.map((s) => s.id === existing.id ? { ...existing, ...payload, name, document, updatedAt: new Date().toISOString() } : s);
+    saveSuppliers(next);
+    return existing.id;
+  }
+
+  const created = {
+    id: crypto.randomUUID(),
+    name,
+    document,
+    contactName: (payload?.contactName || "").trim(),
+    phone: (payload?.phone || "").trim(),
+    email: (payload?.email || "").trim(),
+    notes: (payload?.notes || "").trim(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  saveSuppliers([created, ...suppliers]);
+  return created.id;
+}
+
+// ============================================================================
 // FORNECEDORES POR PRODUTO
 // ============================================================================
 

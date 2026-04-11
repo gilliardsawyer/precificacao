@@ -4,6 +4,7 @@ export const CONFIG = {
     ACTIVE_WORKBOOK_KEY: "precificacao-active-workbook",
     ALERT_FILTER_KEY: "precificacao-alert-filter",
     PRODUCTS_KEY: "precificacao-products",
+    SUPPLIERS_KEY: "precificacao-suppliers",
     PRODUCT_SUPPLIERS_KEY: "precificacao-product-suppliers",
     VERSION_LIMIT: 12,
     STORAGE_QUOTA: 5 * 1024 * 1024 // 5MB

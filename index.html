@@ -996,6 +996,7 @@
         <button class="sub-tab active" data-subtab="supplier-products">Produtos</button>
         <button class="sub-tab" data-subtab="product-suppliers">Fornecedores por Produto</button>
         <button class="sub-tab" data-subtab="supplier-comparison">Comparativo</button>
+        <button class="sub-tab" data-subtab="supplier-registry">Fornecedores</button>
         <button class="sub-tab" data-subtab="supplier-history">Histórico</button>
         <button class="sub-tab" data-subtab="supplier-reports">Relatórios</button>
       </div>
@@ -1121,6 +1122,7 @@
             </label>
             <div style="grid-column: 1 / -1; display:flex; justify-content:flex-end; gap:8px;">
               <input type="hidden" id="editingProductSupplierId" value="">
+              <input type="hidden" id="supplierId" value="">
               <button type="button" id="cancelProductSupplierEditBtn" class="ghost-button hidden">Cancelar edição</button>
               <button type="submit" id="saveProductSupplierBtn" class="primary-button">Salvar vínculo</button>
             </div>
@@ -1319,6 +1321,45 @@
               </thead>
               <tbody id="supplierHistoryTableBody">
                 <tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhuma cotação cadastrada ainda.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-content" data-subcontent="supplier-registry" style="display:none">
+        <div class="card">
+          <div class="section-title">
+            <h2>Cadastro Único de Fornecedores</h2>
+            <p>Centralize nome, CNPJ e contatos. Os vínculos passam a referenciar este cadastro.</p>
+          </div>
+          <div style="display:flex; gap:12px; align-items:end; margin-top:12px; flex-wrap:wrap;">
+            <label style="min-width:320px; flex:1;">
+              <span>Buscar fornecedor</span>
+              <input type="text" id="supplierRegistrySearch" class="search-input" placeholder="Buscar por nome ou CNPJ...">
+            </label>
+            <button type="button" id="openSupplierModalBtn" class="primary-button" style="height: 40px;">+ Novo fornecedor</button>
+          </div>
+        </div>
+
+        <div class="checklist-table-card">
+          <div class="checklist-table-header">
+            <span class="icon">🏢</span> Fornecedores cadastrados
+          </div>
+          <div class="checklist-table-container">
+            <table class="pricing-table">
+              <thead>
+                <tr>
+                  <th>Fornecedor</th>
+                  <th>CNPJ / Documento</th>
+                  <th>Contato</th>
+                  <th>Telefone</th>
+                  <th>E-mail</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="supplierRegistryTableBody">
+                <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum fornecedor cadastrado ainda.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1597,6 +1638,54 @@
       <option value="Infraestrutura">
       <option value="Licenciamento">
     </datalist>
+  </div>
+
+  <!-- MODAL DE CADASTRO DE FORNECEDOR -->
+  <div class="modal no-print" id="addSupplierModal" style="display: none; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 10000; padding: 16px;">
+    <form id="supplierForm" class="card" style="width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 16px;">
+      <div class="section-title" style="margin-bottom: 0;">
+        <h2>Cadastrar Fornecedor</h2>
+        <p>Cadastro único para ser reaproveitado em cotações e vínculos.</p>
+      </div>
+
+      <label class="toolbar-field" style="width: 100%; flex-direction: column; align-items: stretch; gap: 4px;">
+        <span style="font-size: 0.8rem; font-weight: 600;">Nome do fornecedor</span>
+        <input type="text" id="supName" class="search-input" placeholder="Ex: Distribuidora Alfa" required>
+      </label>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <label class="toolbar-field" style="flex-direction: column; align-items: stretch; gap: 4px;">
+          <span style="font-size: 0.8rem; font-weight: 600;">CNPJ / Documento</span>
+          <input type="text" id="supDoc" class="search-input" placeholder="00.000.000/0001-00">
+        </label>
+        <label class="toolbar-field" style="flex-direction: column; align-items: stretch; gap: 4px;">
+          <span style="font-size: 0.8rem; font-weight: 600;">Pessoa de contato</span>
+          <input type="text" id="supContactName" class="search-input" placeholder="Ex: João Silva">
+        </label>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <label class="toolbar-field" style="flex-direction: column; align-items: stretch; gap: 4px;">
+          <span style="font-size: 0.8rem; font-weight: 600;">Telefone</span>
+          <input type="text" id="supPhone" class="search-input" placeholder="(71) 99999-9999">
+        </label>
+        <label class="toolbar-field" style="flex-direction: column; align-items: stretch; gap: 4px;">
+          <span style="font-size: 0.8rem; font-weight: 600;">E-mail</span>
+          <input type="email" id="supEmail" class="search-input" placeholder="contato@fornecedor.com.br">
+        </label>
+      </div>
+
+      <label class="toolbar-field" style="width: 100%; flex-direction: column; align-items: stretch; gap: 4px;">
+        <span style="font-size: 0.8rem; font-weight: 600;">Observações</span>
+        <textarea id="supNotes" class="search-input" rows="2" placeholder="Contato comercial, condições recorrentes, etc."></textarea>
+      </label>
+
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+        <input type="hidden" id="editingSupplierId" value="">
+        <button type="button" class="ghost-button" id="closeSupplierModalBtn">Cancelar</button>
+        <button type="submit" class="primary-button" id="saveSupplierBtn">Salvar fornecedor</button>
+      </div>
+    </form>
   </div>
 
   <script type="module" src="/src/js/main.js"></script>

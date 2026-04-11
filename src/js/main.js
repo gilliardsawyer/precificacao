@@ -4,7 +4,7 @@ import { toNumber, normalizePercent, escapeHtml, debounce, formatCurrency, forma
 import { getEffectivePercents, calculateRow, getLotLabel, groupItemsByLot, calculateLotSubtotal, summarizeWorkbook, validateItemData } from './core/pricing.js';
 import { DOM } from './ui/dom.js';
 import { showNotification } from './ui/toasts.js';
-import { createDefaultWorkbook, ensureWorkbookShape, loadWorkbooks, saveWorkbooks, debouncedSaveWorkbooks, getActiveWorkbookId, setActiveWorkbookId, ensureWorkbooks, getActiveWorkbook, buildSnapshot, updateManufacturersList, updateActiveWorkbook, getAlertFilter, setAlertFilter, loadProducts, loadProductSuppliers } from './storage/local.js';
+import { createDefaultWorkbook, ensureWorkbookShape, loadWorkbooks, saveWorkbooks, debouncedSaveWorkbooks, getActiveWorkbookId, setActiveWorkbookId, ensureWorkbooks, getActiveWorkbook, buildSnapshot, updateManufacturersList, updateActiveWorkbook, getAlertFilter, setAlertFilter, loadProducts, loadProductSuppliers, loadSuppliers } from './storage/local.js';
 
 import { initAuth } from './ui/auth.js';
 import { setupMassEdit, MassEditState } from './ui/massEdit.js';
@@ -392,7 +392,10 @@ function renderManufacturerSuggestions(workbook) {
 
 function renderSupplierSuggestions(workbook) {
   supplierSuggestions.innerHTML = "";
-  (workbook.suppliers || []).forEach((name) => {
+  const workbookNames = (workbook.suppliers || []).map((n) => (n || "").trim()).filter(Boolean);
+  const globalNames = loadSuppliers().map((s) => (s.name || "").trim()).filter(Boolean);
+  const unique = [...new Set([...workbookNames, ...globalNames])].sort((a, b) => a.localeCompare(b));
+  unique.forEach((name) => {
     const option = document.createElement("option");
     option.value = name;
     supplierSuggestions.appendChild(option);
@@ -414,8 +417,8 @@ function renderBaseProductSelector() {
 function getBaseProductSupplierCount(productId) {
   const links = loadProductSuppliers().filter((entry) => entry.productId === productId);
   const unique = new Set(
-    links.map((e) => `${(e.supplierName || "").trim().toLowerCase()}::${(e.supplierDocument || "").trim().toLowerCase()}`)
-      .filter((k) => k !== "::")
+    links.map((e) => e.supplierId || `${(e.supplierName || "").trim().toLowerCase()}::${(e.supplierDocument || "").trim().toLowerCase()}`)
+      .filter((k) => k && k !== "::")
   );
   return unique.size || links.length;
 }

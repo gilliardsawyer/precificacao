@@ -1,4 +1,4 @@
-import { loadProducts, saveProducts, updateProducts, loadProductSuppliers } from '../storage/local.js';
+import { loadProducts, saveProducts, updateProducts, loadProductSuppliers, loadSuppliers } from '../storage/local.js';
 import { formatCurrency, escapeHtml, toNumber } from '../core/utils.js';
 import { showNotification } from './toasts.js';
 
@@ -36,7 +36,7 @@ export function setupProducts() {
         }
     }
 
-    function getSupplierStats(productId) {
+    function getSupplierStats(productId, supplierMap) {
         const links = loadProductSuppliers().filter((entry) => entry.productId === productId);
         if (!links.length) {
             return { supplierCount: 0, minPrice: null, quoteStatus: 'none' };
@@ -47,8 +47,11 @@ export function setupProducts() {
         let latestQuoteDate = null;
 
         links.forEach((entry) => {
-            const key = `${normalizeText(entry.supplierName)}::${normalizeText(entry.supplierDocument)}`;
-            if (key !== '::') supplierKeys.add(key);
+            const supplier = entry.supplierId ? supplierMap.get(entry.supplierId) : null;
+            const supplierName = supplier?.name || entry.supplierName || '';
+            const supplierDocument = supplier?.document || entry.supplierDocument || '';
+            const key = entry.supplierId || `${normalizeText(supplierName)}::${normalizeText(supplierDocument)}`;
+            if (key && key !== '::') supplierKeys.add(key);
             const price = toNumber(entry.quotedPrice);
             if (price > 0 && (minPrice === null || price < minPrice)) {
                 minPrice = price;
@@ -98,6 +101,7 @@ export function setupProducts() {
         const selectedCategory = (categoryFilter?.value || '').trim();
 
         const links = loadProductSuppliers();
+        const supplierMap = new Map(loadSuppliers().map((s) => [s.id, s]));
         const supplierIndexByProductId = new Map();
         links.forEach((entry) => {
             if (!entry.productId) return;
@@ -107,7 +111,7 @@ export function setupProducts() {
         });
 
         const supplierStatsByProductId = new Map(
-            products.map((product) => [product.id, getSupplierStats(product.id)])
+            products.map((product) => [product.id, getSupplierStats(product.id, supplierMap)])
         );
         
         const filtered = products.filter(p => {
@@ -115,7 +119,9 @@ export function setupProducts() {
             const related = supplierIndexByProductId.get(p.id) || [];
             const matchLinked = searchTerm
                 ? related.some((r) => {
-                    const haystack = `${r.supplierName || ''} ${r.brand || ''} ${r.model || ''}`.toLowerCase();
+                    const supplier = r.supplierId ? supplierMap.get(r.supplierId) : null;
+                    const supplierName = supplier?.name || r.supplierName || '';
+                    const haystack = `${supplierName} ${r.brand || ''} ${r.model || ''}`.toLowerCase();
                     return haystack.includes(searchTerm);
                 })
                 : false;
