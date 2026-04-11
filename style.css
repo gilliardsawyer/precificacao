@@ -1793,6 +1793,11 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   margin-bottom: 8px;
 }
 
+body[data-theme="light"] .checklist-header {
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1) !important;
+  color: var(--text-main);
+}
+
 .checklist-header-title {
   display: flex;
   align-items: center;
@@ -1803,6 +1808,11 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   font-size: 1.4rem;
   margin-bottom: 4px;
   color: white;
+}
+
+body[data-theme="light"] .checklist-header-title h2,
+body[data-theme="light"] .checklist-header-title p {
+  color: var(--text-main);
 }
 
 .checklist-header-title p {
@@ -1820,6 +1830,11 @@ body.print-preview .pricing-table .only-print { display: inline-block !important
   display: inline-flex;
   gap: 6px;
   align-items: center;
+}
+
+body[data-theme="light"] .checklist-header-badge {
+  background: rgba(148, 163, 184, 0.18) !important;
+  color: var(--text-main);
 }
 
 .checklist-actions-bar {
@@ -2053,9 +2068,20 @@ body[data-theme="light"] .badge-category.cat-outros {
   border-collapse: collapse;
 }
 
+body[data-theme="light"] .product-table {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: var(--text-main);
+}
+
 .product-table th {
   background: #1e293b !important;
   color: var(--primary) !important;
+}
+
+body[data-theme="light"] .product-table th {
+  background: #f8fafc !important;
+  color: #8a6505 !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .product-table td {
@@ -2063,6 +2089,15 @@ body[data-theme="light"] .badge-category.cat-outros {
   padding: 12px 16px;
   vertical-align: middle;
   border-bottom: 1px solid var(--border);
+}
+
+body[data-theme="light"] .product-table td {
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: var(--text-main);
+}
+
+body[data-theme="light"] .product-table tbody tr:nth-child(even) td {
+  background: rgba(248, 250, 252, 0.98) !important;
 }
 
 .product-sku {
