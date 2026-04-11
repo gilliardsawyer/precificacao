@@ -52,9 +52,17 @@ document.querySelector('[data-nav="ai"]')?.addEventListener('click', () => {
 function setupNavigation() {
   const navItems = document.querySelectorAll(".nav-item");
   const modules = document.querySelectorAll(".module-content");
+  const topbar = document.getElementById("appTopbar");
+
+  function syncTopbarVisibility(activeNav) {
+    if (!topbar) return;
+    const show = activeNav === "pricing";
+    topbar.style.display = show ? "" : "none";
+  }
 
   navItems.forEach((item) => {
     item.addEventListener("click", () => {
+      syncTopbarVisibility(item.dataset.nav);
       const targetModuleId = `module-${item.dataset.nav}`;
       const targetModule = document.getElementById(targetModuleId);
 
@@ -80,6 +88,10 @@ function setupNavigation() {
       console.log(`Módulo ativo: ${item.dataset.nav}`);
     });
   });
+
+  // Estado inicial (default: pricing)
+  const activeNav = document.querySelector(".nav-item.active")?.dataset?.nav || "pricing";
+  syncTopbarVisibility(activeNav);
 }
 
 setupSmartImporter((mappedItems) => {
