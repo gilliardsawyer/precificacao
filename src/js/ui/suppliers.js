@@ -20,6 +20,10 @@ export function setupSuppliersHub() {
   const compareMaxPrice = document.getElementById('licCompareMaxPrice');
   const compareAvgPrice = document.getElementById('licCompareAvgPrice');
   const compareTableBody = document.getElementById('supplierCompareTableBody');
+  const historyFilter = document.getElementById('supplierHistoryFilter');
+  const historyTableBody = document.getElementById('supplierHistoryTableBody');
+  const expiredCountEl = document.getElementById('supplierExpiredCount');
+  const expiredHintEl = document.getElementById('supplierExpiredHint');
   const reportsContainer = document.getElementById('supplierReportsContainer');
   const cancelEditButton = document.getElementById('cancelProductSupplierEditBtn');
   const minSuppliersWarning = document.getElementById('supplierMinWarning');
@@ -68,6 +72,34 @@ export function setupSuppliersHub() {
     } catch {
       return escaped;
     }
+  }
+
+  function parseValidityToDays(text) {
+    const raw = (text || '').toString().trim().toLowerCase();
+    if (!raw) return null;
+    const match = raw.match(/(\d+)/);
+    if (!match) return null;
+    const value = Math.max(0, Number(match[1]));
+    if (!Number.isFinite(value) || value === 0) return null;
+    if (raw.includes('ano')) return value * 365;
+    if (raw.includes('mes')) return value * 30;
+    return value; // default dias
+  }
+
+  function computeExpiryDate(quoteDate, proposalValidity) {
+    if (!quoteDate) return null;
+    const base = new Date(`${quoteDate}T12:00:00`);
+    if (Number.isNaN(base.getTime())) return null;
+    const days = parseValidityToDays(proposalValidity);
+    if (!days) return null;
+    const expires = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+    return expires;
+  }
+
+  function isExpiredQuote(quoteDate, proposalValidity) {
+    const expires = computeExpiryDate(quoteDate, proposalValidity);
+    if (!expires) return false;
+    return Date.now() > expires.getTime();
   }
 
   function getProductMap() {
@@ -356,6 +388,87 @@ export function setupSuppliersHub() {
     `).join('');
   }
 
+  function renderSupplierHistory() {
+    if (!historyTableBody) return;
+
+    const productMap = getProductMap();
+    const term = (historyFilter?.value || '').trim().toLowerCase();
+
+    const relations = loadProductSuppliers().map((relation) => {
+      const expiresAt = computeExpiryDate(relation.quoteDate, relation.proposalValidity);
+      const expired = isExpiredQuote(relation.quoteDate, relation.proposalValidity);
+      return {
+        ...relation,
+        productLabel: getProductLabel(relation, productMap),
+        expiresAt,
+        expired
+      };
+    });
+
+    const expiredCount = relations.filter((r) => r.expired).length;
+    if (expiredCountEl) expiredCountEl.textContent = String(expiredCount);
+    if (expiredHintEl) expiredHintEl.textContent = expiredCount ? 'Revise validade e recote' : 'Sem alertas';
+    if (expiredHintEl) expiredHintEl.style.color = expiredCount ? 'var(--warning)' : 'var(--text-muted)';
+
+    if (!relations.length) {
+      historyTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhuma cotação cadastrada ainda.</td></tr>';
+      return;
+    }
+
+    const filtered = term
+      ? relations.filter((r) => {
+        const haystack = [
+          r.supplierName,
+          r.supplierDocument,
+          r.productLabel,
+          r.brand,
+          r.model,
+          r.warranty,
+          r.proposalValidity,
+          r.notes
+        ].join(' ').toLowerCase();
+        return haystack.includes(term);
+      })
+      : relations;
+
+    const sorted = filtered.sort((a, b) => {
+      const ad = a.quoteDate ? new Date(`${a.quoteDate}T12:00:00`).getTime() : 0;
+      const bd = b.quoteDate ? new Date(`${b.quoteDate}T12:00:00`).getTime() : 0;
+      return bd - ad;
+    });
+
+    if (!sorted.length) {
+      historyTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhuma cotação encontrada para o filtro.</td></tr>';
+      return;
+    }
+
+    const statusBadge = (relation) => {
+      if (relation.expired) return '<span class="badge-category cat-fiscal">Vencida</span>';
+      if (relation.quoteDate && relation.proposalValidity) return '<span class="badge-category cat-societario">Válida</span>';
+      return '<span class="badge-category cat-outros">Sem validade</span>';
+    };
+
+    historyTableBody.innerHTML = sorted.map((relation) => {
+      const price = toNumber(relation.quotedPrice);
+      const expiresLabel = relation.expiresAt
+        ? relation.expiresAt.toLocaleDateString('pt-BR')
+        : '—';
+      const rowClass = relation.expired ? 'quote-expired' : '';
+      return `
+        <tr class="${rowClass}">
+          <td>${highlightHtml(relation.supplierName || '—', term)}</td>
+          <td>${highlightHtml(relation.productLabel || '—', term)}</td>
+          <td>${highlightHtml(relation.brand || '—', term)}</td>
+          <td>${highlightHtml(relation.model || '—', term)}</td>
+          <td style="text-align:right;">${price > 0 ? formatCurrency(price) : '—'}</td>
+          <td style="text-align:center;">${escapeHtml(relation.quoteDate || '—')}</td>
+          <td style="text-align:center;">${highlightHtml(relation.proposalValidity || '—', term)}${relation.expiresAt ? ` <span style="color:var(--text-muted); font-size:0.8rem;">(até ${expiresLabel})</span>` : ''}</td>
+          <td style="text-align:center;">${statusBadge(relation)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
   function editRelation(id) {
     const relation = loadProductSuppliers().find((entry) => entry.id === id);
     if (!relation) return;
@@ -397,6 +510,7 @@ export function setupSuppliersHub() {
     renderComparison();
     renderReports();
     updateMinSuppliersWarning();
+    renderSupplierHistory();
   }
 
   function updateMinSuppliersWarning() {
@@ -485,6 +599,7 @@ export function setupSuppliersHub() {
       globalSearchInput.dispatchEvent(new Event('input'));
     }
   });
+  historyFilter?.addEventListener('input', renderSupplierHistory);
 
   refreshAll();
   resetForm();
