@@ -396,6 +396,17 @@
               <input type="text" id="lotName" placeholder="Ex.: Lote 1" aria-label="Lote ou Grupo do item">
             </label>
             <label>
+              <span>Produto base (licitação)</span>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select id="baseProductSelect" class="search-input" style="flex:1;">
+                  <option value="">Selecionar do catálogo...</option>
+                </select>
+                <button type="button" id="useBaseProductBtn" class="ghost-button" style="height:38px; padding:0 14px;">Carregar</button>
+                <button type="button" id="addBaseProductBtn" class="primary-button" style="height:38px; padding:0 14px;">Adicionar</button>
+              </div>
+              <input type="hidden" id="baseProductId" value="">
+            </label>
+            <label>
               <span>Produto</span>
               <input type="text" id="productName" list="productSuggestions" placeholder="Ex.: Papel A4 caixa com 10 resmas" aria-label="Nome do produto" required>
             </label>

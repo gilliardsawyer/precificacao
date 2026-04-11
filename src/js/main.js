@@ -4,7 +4,7 @@ import { toNumber, normalizePercent, escapeHtml, debounce, formatCurrency, forma
 import { getEffectivePercents, calculateRow, getLotLabel, groupItemsByLot, calculateLotSubtotal, summarizeWorkbook, validateItemData } from './core/pricing.js';
 import { DOM } from './ui/dom.js';
 import { showNotification } from './ui/toasts.js';
-import { createDefaultWorkbook, ensureWorkbookShape, loadWorkbooks, saveWorkbooks, debouncedSaveWorkbooks, getActiveWorkbookId, setActiveWorkbookId, ensureWorkbooks, getActiveWorkbook, buildSnapshot, updateManufacturersList, updateActiveWorkbook, getAlertFilter, setAlertFilter } from './storage/local.js';
+import { createDefaultWorkbook, ensureWorkbookShape, loadWorkbooks, saveWorkbooks, debouncedSaveWorkbooks, getActiveWorkbookId, setActiveWorkbookId, ensureWorkbooks, getActiveWorkbook, buildSnapshot, updateManufacturersList, updateActiveWorkbook, getAlertFilter, setAlertFilter, loadProducts, loadProductSuppliers } from './storage/local.js';
 
 import { initAuth } from './ui/auth.js';
 import { setupMassEdit, MassEditState } from './ui/massEdit.js';
@@ -133,6 +133,8 @@ const rowTemplate = DOM.tables.rowTemplate;
 const clearAllButton = DOM.buttons.clearAll;
 const cancelEditButton = DOM.buttons.cancelEdit;
 const saveItemButton = DOM.buttons.saveItem;
+const useBaseProductBtn = DOM.buttons.useBaseProduct;
+const addBaseProductBtn = DOM.buttons.addBaseProduct;
 const newSheetButton = DOM.buttons.newSheet;
 const newSheetBottomButton = DOM.buttons.newSheetBottom;
 const duplicateSheetButton = DOM.buttons.duplicateSheet;
@@ -159,6 +161,7 @@ const compareSummary = DOM.sidebars.compareSummary;
 const lotSelector = DOM.inputs.lotSelector;
 const duplicateLotButton = DOM.buttons.duplicateLot;
 const lotSummaryList = DOM.sidebars.lotSummaryList;
+const baseProductSelect = DOM.inputs.baseProductSelect;
 
 const itemFields = DOM.itemFields;
 const bidFields = DOM.bidFields;
@@ -286,8 +289,15 @@ function applyUiModes() {
 
 
 function getItemFormData() {
+  const baseProductId = itemFields.baseProductId?.value || "";
+  const baseProduct = baseProductId ? loadProducts().find((p) => p.id === baseProductId) : null;
   return {
     lotName: itemFields.lotName.value.trim(),
+    baseProductId: baseProductId || null,
+    baseProductName: baseProduct?.name || "",
+    baseProductCategory: baseProduct?.category || "",
+    baseProductUnit: baseProduct?.unit || "",
+    baseProductTechnicalDescription: baseProduct?.technicalDescription || "",
     productName: itemFields.productName.value.trim(),
     manufacturer: itemFields.manufacturer.value.trim(),
     supplier: itemFields.supplier.value.trim(),
@@ -320,6 +330,8 @@ function getSettingsFromForm() {
 
 function resetItemForm() {
   itemForm.reset();
+  if (itemFields.baseProductId) itemFields.baseProductId.value = "";
+  if (baseProductSelect) baseProductSelect.value = "";
   itemFields.quantity.value = "1";
   itemFields.unitPrice.value = "0";
   STATE.editingItemId = null;
@@ -329,6 +341,8 @@ function resetItemForm() {
 
 function populateItemForm(item) {
   itemFields.lotName.value = item.lotName || "";
+  if (itemFields.baseProductId) itemFields.baseProductId.value = item.baseProductId || "";
+  if (baseProductSelect) baseProductSelect.value = item.baseProductId || "";
   itemFields.productName.value = item.productName || "";
   itemFields.manufacturer.value = item.manufacturer || "";
   itemFields.supplier.value = item.supplier || "";
@@ -383,6 +397,76 @@ function renderSupplierSuggestions(workbook) {
     option.value = name;
     supplierSuggestions.appendChild(option);
   });
+}
+
+function renderBaseProductSelector() {
+  if (!baseProductSelect) return;
+  const current = baseProductSelect.value || "";
+  const products = loadProducts().filter((p) => (p.status || "active") !== "inactive");
+  baseProductSelect.innerHTML = ['<option value="">Selecionar do catálogo...</option>']
+    .concat(products
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      .map((p) => `<option value="${p.id}">${escapeHtml(p.name || "Produto base")}</option>`))
+    .join("");
+  baseProductSelect.value = products.some((p) => p.id === current) ? current : "";
+}
+
+function getBaseProductSupplierCount(productId) {
+  const links = loadProductSuppliers().filter((entry) => entry.productId === productId);
+  const unique = new Set(
+    links.map((e) => `${(e.supplierName || "").trim().toLowerCase()}::${(e.supplierDocument || "").trim().toLowerCase()}`)
+      .filter((k) => k !== "::")
+  );
+  return unique.size || links.length;
+}
+
+function getBestOfferForBaseProduct(productId) {
+  const links = loadProductSuppliers()
+    .filter((entry) => entry.productId === productId)
+    .map((entry) => ({ ...entry, quotedPrice: toNumber(entry.quotedPrice) }))
+    .filter((entry) => entry.quotedPrice > 0);
+
+  if (!links.length) return null;
+
+  const meets = links.filter((e) => !(e.meetsMinimum === false || e.meetsMinimum === "no"));
+  const candidates = meets.length ? meets : links;
+  return candidates.sort((a, b) => a.quotedPrice - b.quotedPrice)[0];
+}
+
+function applyBaseProductToForm({ createIfEmpty = false } = {}) {
+  if (!baseProductSelect || !itemFields.baseProductId) return false;
+  const productId = baseProductSelect.value;
+  if (!productId) {
+    if (createIfEmpty) {
+      showNotification("Selecione um produto base do catálogo.", "warning");
+    }
+    return false;
+  }
+
+  const product = loadProducts().find((p) => p.id === productId);
+  if (!product) {
+    showNotification("Produto base não encontrado no catálogo.", "error");
+    return false;
+  }
+
+  itemFields.baseProductId.value = productId;
+  itemFields.productName.value = product.name || itemFields.productName.value;
+
+  const offer = getBestOfferForBaseProduct(productId);
+  if (offer) {
+    itemFields.supplier.value = offer.supplierName || itemFields.supplier.value;
+    const mm = [offer.brand, offer.model].filter(Boolean).join(" / ");
+    if (mm) itemFields.manufacturer.value = mm;
+    itemFields.unitPrice.value = String(Math.max(0, toNumber(offer.quotedPrice)));
+  }
+
+  const suppliersCount = getBaseProductSupplierCount(productId);
+  if (suppliersCount > 0 && suppliersCount < 3) {
+    showNotification(`Atenção: "${product.name}" tem ${suppliersCount} fornecedor(es) vinculado(s). Recomendado >= 3.`, "warning");
+  }
+
+  showNotification(`Produto base "${product.name}" carregado no item.`, "info");
+  return true;
 }
 
 function syncFormsFromWorkbook(workbook) {
@@ -833,6 +917,7 @@ function renderAll(options = {}) {
     renderLotSelector(workbook);
     renderManufacturerSuggestions(workbook);
     renderSupplierSuggestions(workbook);
+    renderBaseProductSelector();
     syncFormsFromWorkbook(workbook);
     syncPrintHeader(workbook);
   }
@@ -1400,6 +1485,21 @@ itemForm.addEventListener("submit", (event) => {
 });
 
 itemForm.addEventListener("input", markAutosavePending);
+baseProductSelect?.addEventListener("change", () => {
+  if (itemFields.baseProductId) itemFields.baseProductId.value = baseProductSelect.value || "";
+});
+useBaseProductBtn?.addEventListener("click", () => {
+  applyBaseProductToForm({ createIfEmpty: true });
+});
+addBaseProductBtn?.addEventListener("click", () => {
+  if (STATE.editingItemId) {
+    showNotification("Finalize ou cancele a edição antes de adicionar um novo item da base.", "warning");
+    return;
+  }
+  const ok = applyBaseProductToForm({ createIfEmpty: true });
+  if (!ok) return;
+  saveItem(getItemFormData());
+});
 bidForm.addEventListener("input", () => {
   markAutosavePending();
   debouncedAutosaveBidForm();

@@ -50,6 +50,11 @@ export function ensureWorkbookShape(workbook) {
     settings: { ...base.settings, ...(workbook.settings || {}) },
     items: (workbook.items || []).map((item) => ({
       lotName: "",
+      baseProductId: null,
+      baseProductName: "",
+      baseProductCategory: "",
+      baseProductUnit: "",
+      baseProductTechnicalDescription: "",
       productName: "",
       manufacturer: "",
       supplier: "",

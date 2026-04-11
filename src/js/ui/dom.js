@@ -13,6 +13,8 @@ export const DOM = {
   buttons: {
     saveItem: document.getElementById("saveItemButton"),
     cancelEdit: document.getElementById("cancelEditButton"),
+    useBaseProduct: document.getElementById("useBaseProductBtn"),
+    addBaseProduct: document.getElementById("addBaseProductBtn"),
     newSheet: document.getElementById("newSheetButton"),
     newSheetBottom: document.getElementById("newSheetBottomButton"),
     duplicateSheet: document.getElementById("duplicateSheetButton"),
@@ -37,11 +39,13 @@ export const DOM = {
     compareSheetSelector: document.getElementById("compareSheetSelector"),
     lotSelector: document.getElementById("lotSelector"),
     quickSearch: document.getElementById("quickSearch"),
+    baseProductSelect: document.getElementById("baseProductSelect"),
     manufacturerSuggestions: document.getElementById("manufacturerSuggestions"),
     supplierSuggestions: document.getElementById("supplierSuggestions")
   },
   itemFields: {
     lotName: document.getElementById("lotName"),
+    baseProductId: document.getElementById("baseProductId"),
     productName: document.getElementById("productName"),
     manufacturer: document.getElementById("manufacturer"),
     supplier: document.getElementById("supplier"),
