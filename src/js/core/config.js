@@ -6,6 +6,7 @@ export const CONFIG = {
     PRODUCTS_KEY: "precificacao-products",
     SUPPLIERS_KEY: "precificacao-suppliers",
     PRODUCT_SUPPLIERS_KEY: "precificacao-product-suppliers",
+    FREIGHT_API_SETTINGS_KEY: "precificacao-freight-api-settings",
     VERSION_LIMIT: 12,
     STORAGE_QUOTA: 5 * 1024 * 1024 // 5MB
   },

@@ -1,6 +1,7 @@
 import { toNumber, formatCurrency, formatPercent, escapeHtml } from '../core/utils.js';
 import { updateActiveWorkbook } from '../storage/local.js';
 import { showNotification } from './toasts.js';
+import { loadFreightApiSettings, quoteFreightWithMelhorEnvio, saveFreightApiSettings } from '../services/freightApi.js';
 
 const LOGISTICS_DEFAULTS = {
   freightPerKg: 0,
@@ -14,6 +15,8 @@ const LOGISTICS_DEFAULTS = {
   urgency: 'normal',
   history: []
 };
+
+let lastFreightApiQuotes = [];
 
 function getLogisticsConfig(workbook) {
   return { ...LOGISTICS_DEFAULTS, ...(workbook?.logistics || {}) };
@@ -33,6 +36,16 @@ function getConfigElements() {
   };
 }
 
+function getApiElements() {
+  return {
+    provider: document.getElementById('freightApiProvider'),
+    token: document.getElementById('freightApiToken'),
+    originZip: document.getElementById('freightApiOriginZip'),
+    environment: document.getElementById('freightApiEnvironment'),
+    quoteButton: document.getElementById('quoteFreightApiBtn')
+  };
+}
+
 function syncConfigForm(config) {
   const fields = getConfigElements();
   if (fields.freightPerKg) fields.freightPerKg.value = config.freightPerKg || '';
@@ -44,6 +57,25 @@ function syncConfigForm(config) {
   if (fields.destinationZip) fields.destinationZip.value = config.destinationZip || '';
   if (fields.desiredDeadlineDays) fields.desiredDeadlineDays.value = config.desiredDeadlineDays || '';
   if (fields.urgency) fields.urgency.value = config.urgency || 'normal';
+}
+
+function syncApiForm() {
+  const settings = loadFreightApiSettings();
+  const fields = getApiElements();
+  if (fields.provider) fields.provider.value = settings.provider || 'melhorenvio';
+  if (fields.token) fields.token.value = settings.token || '';
+  if (fields.originZip) fields.originZip.value = settings.originZip || '';
+  if (fields.environment) fields.environment.value = settings.useSandbox ? 'sandbox' : 'production';
+}
+
+function readApiForm() {
+  const fields = getApiElements();
+  return {
+    provider: fields.provider?.value || 'melhorenvio',
+    token: (fields.token?.value || '').trim(),
+    originZip: (fields.originZip?.value || '').trim(),
+    useSandbox: (fields.environment?.value || 'sandbox') === 'sandbox'
+  };
 }
 
 function readConfigFromForm() {
@@ -296,6 +328,38 @@ function renderHistory(history = []) {
   `).join('');
 }
 
+function renderFreightApiResults(quotes = []) {
+  const tbody = document.getElementById('freightApiResultsBody');
+  if (!tbody) return;
+  if (!quotes.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhuma cotação consultada ainda.</td></tr>';
+    return;
+  }
+
+  const validPrices = quotes.map((quote) => quote.price).filter((price) => price > 0);
+  const bestPrice = validPrices.length ? Math.min(...validPrices) : 0;
+
+  tbody.innerHTML = quotes.map((quote, index) => {
+    const isBest = bestPrice > 0 && quote.price === bestPrice && !quote.error;
+    const status = quote.error ? 'Indisponível' : isBest ? 'Melhor cotação' : 'Disponível';
+    const statusColor = quote.error ? 'var(--danger)' : isBest ? 'var(--green)' : 'var(--primary)';
+    return `
+      <tr>
+        <td>${escapeHtml(quote.company || '—')}</td>
+        <td>${escapeHtml(quote.name || '—')}</td>
+        <td style="text-align:center;">${quote.deliveryTime > 0 ? `${quote.deliveryTime} dia(s)` : '—'}</td>
+        <td style="text-align:right; font-weight:700;">${quote.price > 0 ? formatCurrency(quote.price) : '—'}</td>
+        <td style="text-align:center; color:${statusColor}; font-weight:700;">${escapeHtml(status)}</td>
+        <td style="text-align:center;">
+          ${quote.error
+            ? `<span style="color:var(--text-muted)">${escapeHtml(quote.error)}</span>`
+            : `<button type="button" class="ghost-button freight-api-use-btn" data-quote-index="${index}">Usar na simulação</button>`}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
 function pushHistory(action, workbook, analysis, config) {
   updateActiveWorkbook((currentWorkbook) => {
     const currentConfig = getLogisticsConfig(currentWorkbook);
@@ -404,9 +468,29 @@ function applyItemTransportPercent(getWorkbookFn, analysis) {
   showNotification('Rateio de transporte aplicado por item com sucesso.', 'success');
 }
 
+function applyApiQuoteToManualSimulation(quote, analysis) {
+  if (!quote || !analysis || analysis.totalChargedWeight <= 0) {
+    showNotification('Nao foi possivel aplicar a cotacao escolhida.', 'warning');
+    return;
+  }
+
+  const freightPerKg = quote.price / analysis.totalChargedWeight;
+  const currentConfig = readConfigFromForm();
+  const nextConfig = {
+    ...currentConfig,
+    freightPerKg
+  };
+
+  saveLogisticsConfig(nextConfig, true);
+  syncConfigForm(nextConfig);
+  showNotification(`Cotação "${quote.company} - ${quote.name}" aplicada na simulação manual.`, 'success');
+}
+
 export function setupLogistics(getWorkbookFn) {
   const calcBtn = document.getElementById('calcFreightBtn');
   if (!calcBtn) return;
+
+  syncApiForm();
 
   const configFields = Object.values(getConfigElements()).filter(Boolean);
   configFields.forEach((field) => {
@@ -425,6 +509,50 @@ export function setupLogistics(getWorkbookFn) {
       pushHistory('Recalculo logistico', workbook, analysis, config);
       showNotification('Analise logistica recalculada.', 'success');
     }
+  });
+
+  const apiFields = getApiElements();
+  apiFields.provider?.addEventListener('change', () => saveFreightApiSettings(readApiForm()));
+  apiFields.token?.addEventListener('change', () => saveFreightApiSettings(readApiForm()));
+  apiFields.originZip?.addEventListener('change', () => saveFreightApiSettings(readApiForm()));
+  apiFields.environment?.addEventListener('change', () => saveFreightApiSettings(readApiForm()));
+
+  apiFields.quoteButton?.addEventListener('click', async () => {
+    const apiSettings = saveFreightApiSettings(readApiForm());
+    const analysis = renderLogisticsTable(getWorkbookFn);
+    const destinationZip = document.getElementById('destinationZip')?.value || '';
+    if (!analysis) return;
+
+    const originalLabel = apiFields.quoteButton.textContent;
+    apiFields.quoteButton.disabled = true;
+    apiFields.quoteButton.textContent = 'Consultando...';
+
+    try {
+      const quotes = await quoteFreightWithMelhorEnvio({
+        settings: apiSettings,
+        analysis,
+        destinationZip
+      });
+      lastFreightApiQuotes = quotes;
+      renderFreightApiResults(quotes);
+      showNotification('Cotação via API realizada com sucesso.', 'success');
+    } catch (error) {
+      renderFreightApiResults([]);
+      showNotification(error.message || 'Falha ao consultar frete na API.', 'error');
+    } finally {
+      apiFields.quoteButton.disabled = false;
+      apiFields.quoteButton.textContent = originalLabel;
+    }
+  });
+
+  document.getElementById('freightApiResultsBody')?.addEventListener('click', (event) => {
+    const button = event.target.closest('.freight-api-use-btn');
+    if (!button) return;
+    const quote = lastFreightApiQuotes[Number(button.dataset.quoteIndex)];
+    const analysis = renderLogisticsTable(getWorkbookFn);
+    if (!analysis || !quote) return;
+    applyApiQuoteToManualSimulation(quote, analysis);
+    renderLogisticsTable(getWorkbookFn);
   });
 
   document.getElementById('applyGlobalFreightBtn')?.addEventListener('click', () => {
@@ -529,5 +657,6 @@ export function renderLogisticsTable(getWorkbookFn) {
   updateLogisticsSummary(analysis);
   renderAlerts(analysis.alerts);
   renderHistory(config.history || []);
+  renderFreightApiResults(lastFreightApiQuotes);
   return analysis;
 }

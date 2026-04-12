@@ -612,6 +612,39 @@
             <button type="button" id="calcFreightBtn" class="primary-button" style="width: 100%;">Calcular Frete Total</button>
           </div>
         </div>
+        <div class="dashboard-panel" style="margin-top: 12px;">
+          <div class="dashboard-panel-header">
+            <h3>Consulta de Frete por API</h3>
+            <p>Consulte cotações reais do Melhor Envio e use como referência para a simulação logística.</p>
+          </div>
+          <div style="display:grid; grid-template-columns: 140px 1fr 160px 150px auto; gap: 12px; align-items:end;">
+            <label style="display:flex; flex-direction:column; gap:4px;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Provedor</span>
+              <select id="freightApiProvider" class="search-input">
+                <option value="melhorenvio">Melhor Envio</option>
+              </select>
+            </label>
+            <label style="display:flex; flex-direction:column; gap:4px;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Token Bearer</span>
+              <input type="password" id="freightApiToken" class="search-input" placeholder="Cole aqui o token da API">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:4px;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">CEP origem</span>
+              <input type="text" id="freightApiOriginZip" class="search-input" placeholder="00000-000">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:4px;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Ambiente</span>
+              <select id="freightApiEnvironment" class="search-input">
+                <option value="sandbox">Sandbox</option>
+                <option value="production">Produção</option>
+              </select>
+            </label>
+            <button type="button" id="quoteFreightApiBtn" class="primary-button">Consultar API</button>
+          </div>
+          <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">
+            O token fica salvo apenas neste navegador para uso local.
+          </div>
+        </div>
       </div>
 
       <div class="dashboard-shell">
@@ -683,6 +716,30 @@
           <div id="logisticsAlertsList" class="dashboard-list">
             <div class="dashboard-empty">Sem alertas no momento.</div>
           </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <h2>🌐 Cotações via API</h2>
+          <p>Resultados retornados pelo provedor configurado para o conjunto atual de volumes.</p>
+        </div>
+        <div style="overflow-x:auto; margin-top: 12px;">
+          <table class="pricing-table" style="min-width: 760px;">
+            <thead>
+              <tr>
+                <th>Transportadora</th>
+                <th>Serviço</th>
+                <th>Prazo</th>
+                <th>Preço</th>
+                <th>Status</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody id="freightApiResultsBody">
+              <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhuma cotação consultada ainda.</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
