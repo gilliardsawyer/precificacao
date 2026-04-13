@@ -18,10 +18,16 @@ export function setupProducts() {
     const unitInput = document.getElementById('prodUnit');
     const categoryList = document.getElementById('productCategoryList');
     const unitList = document.getElementById('productUnitList');
+    const technicalSheetInput = document.getElementById('prodTechnicalSheet');
+    const technicalSheetInfo = document.getElementById('prodTechnicalSheetInfo');
+    const openTechnicalSheetBtn = document.getElementById('openTechnicalSheetBtn');
+    const removeTechnicalSheetBtn = document.getElementById('removeTechnicalSheetBtn');
 
     if (!container) return;
 
     const QUOTE_STALE_DAYS = 30;
+    const MAX_TECHNICAL_SHEET_SIZE = 1.5 * 1024 * 1024;
+    let pendingTechnicalSheet = null;
 
     function normalizeText(value) {
         return (value || '').toString().trim().toLowerCase();
@@ -39,6 +45,41 @@ export function setupProducts() {
         } catch {
             return escaped;
         }
+    }
+
+    function updateTechnicalSheetUi(sheet = pendingTechnicalSheet) {
+        if (technicalSheetInfo) {
+            technicalSheetInfo.textContent = sheet
+                ? `${sheet.name} • ${(sheet.size / 1024).toFixed(0)} KB`
+                : 'Nenhuma ficha técnica anexada.';
+        }
+        openTechnicalSheetBtn?.classList.toggle('hidden', !sheet);
+        removeTechnicalSheetBtn?.classList.toggle('hidden', !sheet);
+    }
+
+    function resetTechnicalSheet() {
+        pendingTechnicalSheet = null;
+        if (technicalSheetInput) technicalSheetInput.value = '';
+        updateTechnicalSheetUi(null);
+    }
+
+    function openTechnicalSheet(sheet = pendingTechnicalSheet) {
+        if (!sheet?.dataUrl) return;
+        window.open(sheet.dataUrl, '_blank', 'noopener');
+    }
+
+    function readTechnicalSheet(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve({
+                name: file.name,
+                type: file.type || 'application/octet-stream',
+                size: file.size,
+                dataUrl: reader.result
+            });
+            reader.onerror = () => reject(new Error('Não foi possível ler a ficha técnica selecionada.'));
+            reader.readAsDataURL(file);
+        });
     }
 
     function getSupplierStats(productId, supplierMap) {
@@ -163,6 +204,7 @@ export function setupProducts() {
                 <td class="product-cost">${supplierStatsByProductId.get(product.id).minPrice === null ? '—' : formatCurrency(supplierStatsByProductId.get(product.id).minPrice)}</td>
                 <td style="text-align:center;">${getQuoteBadge(supplierStatsByProductId.get(product.id).quoteStatus)}</td>
                 <td style="text-align: center; display: flex; gap: 4px; justify-content: center;">
+                    ${product.technicalSheet?.dataUrl ? `<button class="product-action-btn info" title="Abrir ficha técnica" data-sheet-id="${product.id}">📎</button>` : ''}
                     <button class="product-action-btn compare" title="Abrir comparativo" data-compare-id="${product.id}">📊</button>
                     <button class="product-action-btn edit" title="Editar" data-id="${product.id}">✏️</button>
                     <button class="product-action-btn delete" title="Excluir" data-id="${product.id}">🗑️</button>
@@ -180,6 +222,14 @@ export function setupProducts() {
         container.querySelectorAll('[data-compare-id]').forEach(btn => {
             btn.addEventListener('click', () => openComparisonForProduct(btn.dataset.compareId));
         });
+        container.querySelectorAll('[data-sheet-id]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const product = loadProducts().find((entry) => entry.id === btn.dataset.sheetId);
+                if (product?.technicalSheet) {
+                    openTechnicalSheet(product.technicalSheet);
+                }
+            });
+        });
     }
 
     function editProduct(id) {
@@ -193,6 +243,8 @@ export function setupProducts() {
         document.getElementById('prodUnit').value = normalizeUnit(product.unit || 'UN');
         document.getElementById('prodStatus').value = product.status || 'active';
         document.getElementById('prodDescription').value = product.technicalDescription || '';
+        pendingTechnicalSheet = product.technicalSheet || null;
+        updateTechnicalSheetUi();
 
         document.getElementById('saveProductBtn').textContent = 'Atualizar Produto';
         modal.style.display = 'flex';
@@ -221,6 +273,7 @@ export function setupProducts() {
             if (statusEl) statusEl.value = 'active';
             if (categoryInput) categoryInput.value = '';
             if (unitInput) unitInput.value = 'UN';
+            resetTechnicalSheet();
             renderStandards();
             modal.style.display = 'flex';
         });
@@ -246,6 +299,7 @@ export function setupProducts() {
                 unit: normalizedUnit || 'UN',
                 status: document.getElementById('prodStatus').value || 'active',
                 technicalDescription: document.getElementById('prodDescription').value.trim(),
+                technicalSheet: pendingTechnicalSheet,
                 updatedAt: new Date().toISOString()
             };
 
@@ -259,6 +313,7 @@ export function setupProducts() {
 
             showNotification(id ? 'Produto atualizado!' : 'Produto cadastrado!', 'success');
             modal.style.display = 'none';
+            resetTechnicalSheet();
             renderStandards();
             renderProducts(searchInput.value);
             updateProductSuggestions();
@@ -272,6 +327,27 @@ export function setupProducts() {
     unitInput?.addEventListener('blur', () => {
         unitInput.value = normalizeUnit(unitInput.value);
     });
+    technicalSheetInput?.addEventListener('change', async () => {
+        const file = technicalSheetInput.files?.[0];
+        if (!file) {
+            resetTechnicalSheet();
+            return;
+        }
+        if (file.size > MAX_TECHNICAL_SHEET_SIZE) {
+            showNotification('A ficha técnica deve ter no máximo 1,5 MB para caber no armazenamento local.', 'warning');
+            resetTechnicalSheet();
+            return;
+        }
+        try {
+            pendingTechnicalSheet = await readTechnicalSheet(file);
+            updateTechnicalSheetUi();
+        } catch (error) {
+            showNotification(error.message || 'Não foi possível carregar a ficha técnica.', 'error');
+            resetTechnicalSheet();
+        }
+    });
+    openTechnicalSheetBtn?.addEventListener('click', () => openTechnicalSheet());
+    removeTechnicalSheetBtn?.addEventListener('click', () => resetTechnicalSheet());
 
     if (searchInput) {
         searchInput.addEventListener('input', () => {
@@ -286,6 +362,7 @@ export function setupProducts() {
 
     // Inicializar Tabela
     renderStandards();
+    updateTechnicalSheetUi();
     renderProducts();
     updateProductSuggestions();
     hookProductSelection();
