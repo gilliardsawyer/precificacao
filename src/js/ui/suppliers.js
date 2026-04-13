@@ -306,18 +306,18 @@ export function setupSuppliersHub() {
       const supplierDoc = supplier?.document || relation.supplierDocument || '';
       return `
       <tr data-product-supplier-id="${relation.id}">
-        <td>${highlightHtml(getProductLabel(relation, productMap), term)}</td>
-        <td>${highlightHtml(supplierName, term)}${supplierDoc ? `<div style="font-size:0.75rem;color:var(--text-muted)">${highlightHtml(supplierDoc, term)}</div>` : ''}</td>
-        <td>${highlightHtml(`${relation.brand || '—'}${relation.model ? ` / ${relation.model}` : ''}`, term)}</td>
+        <td class="supplier-product-cell">${highlightHtml(getProductLabel(relation, productMap), term)}</td>
+        <td class="supplier-name-cell">${highlightHtml(supplierName, term)}${supplierDoc ? `<div style="font-size:0.75rem;color:var(--text-muted)">${highlightHtml(supplierDoc, term)}</div>` : ''}</td>
+        <td class="supplier-brand-cell">${highlightHtml(`${relation.brand || '—'}${relation.model ? ` / ${relation.model}` : ''}`, term)}</td>
         <td style="text-align:right;">${toNumber(relation.quotedPrice) > 0 ? formatCurrency(relation.quotedPrice) : '—'}</td>
         <td style="text-align:center;">${relation.leadTimeDays ? `${escapeHtml(String(relation.leadTimeDays))} dias` : '—'}</td>
         <td style="text-align:center;">${escapeHtml(relation.warranty || '—')}</td>
         <td style="text-align:center;">${escapeHtml(relation.proposalValidity || '—')}</td>
         <td style="text-align:center;">${meetsBadge(relation.meetsMinimum)}</td>
         <td style="text-align:center;">${escapeHtml(relation.quoteDate || '—')}</td>
-        <td>${highlightHtml(relation.techCharacteristics || '—', term)}</td>
-        <td>${highlightHtml(relation.notes || '—', term)}</td>
-        <td style="text-align:center; display:flex; gap:4px; justify-content:center;">
+        <td class="supplier-tech-cell">${highlightHtml(relation.techCharacteristics || '—', term)}</td>
+        <td class="supplier-notes-cell">${highlightHtml(relation.notes || '—', term)}</td>
+        <td class="supplier-actions-cell" style="text-align:center; display:flex; gap:4px; justify-content:center;">
           <button type="button" class="product-action-btn edit" data-action="edit-product-supplier" data-id="${relation.id}" title="Editar">✏️</button>
           <button type="button" class="product-action-btn delete" data-action="delete-product-supplier" data-id="${relation.id}" title="Excluir">🗑️</button>
         </td>
