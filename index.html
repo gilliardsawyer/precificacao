@@ -1277,6 +1277,22 @@
               <select id="supplierProductSelect" class="search-input"></select>
             </label>
             <label>
+              <span>Modelo técnico</span>
+              <select id="supplierTechTemplate" class="search-input">
+                <option value="">Automático pela categoria</option>
+                <option value="nobreak">Nobreak / Energia</option>
+                <option value="informatica">Informática</option>
+                <option value="impressao">Impressão</option>
+                <option value="moveis">Móveis</option>
+                <option value="generic">Genérico</option>
+              </select>
+            </label>
+            <div class="supplier-tech-toolbar">
+              <button type="button" id="applySupplierTechTemplateBtn" class="ghost-button">Aplicar modelo</button>
+              <button type="button" id="importSupplierTechBaseBtn" class="ghost-button">Usar base do produto</button>
+              <button type="button" id="openSupplierProductSheetBtn" class="ghost-button hidden">Abrir ficha do produto</button>
+            </div>
+            <label>
               <span>Fornecedor</span>
               <input type="text" id="supplierCompanyName" class="search-input" placeholder="Ex.: Distribuidora Alfa" list="supplierSuggestions">
             </label>
@@ -1316,12 +1332,37 @@
               <span>Atende especificação mínima?</span>
               <select id="supplierMeetsMinimum" class="search-input">
                 <option value="yes">Sim</option>
+                <option value="partial">Parcial</option>
                 <option value="no">Não</option>
               </select>
             </label>
+            <label style="grid-column: span 2;">
+              <span>Resumo técnico</span>
+              <input type="text" id="supplierTechSummary" class="search-input" placeholder="Ex.: Nobreak senoidal 600VA com 4 tomadas padrão NBR 14136">
+            </label>
+            <label style="grid-column: span 2;">
+              <span>Tags técnicas</span>
+              <input type="text" id="supplierTechTags" class="search-input" placeholder="Ex.: bivolt, nobreak, senoidal, NBR 14136">
+            </label>
+            <div class="supplier-tag-preview" id="supplierTechTagsPreview" style="grid-column: 1 / -1;"></div>
+            <div class="supplier-tech-card" style="grid-column: 1 / -1;">
+              <div class="supplier-tech-card-header">
+                <div>
+                  <strong>Características estruturadas</strong>
+                  <small>Cadastre em formato campo + valor para facilitar busca, leitura e comparativo.</small>
+                </div>
+                <button type="button" id="addSupplierSpecBtn" class="ghost-button">+ Característica</button>
+              </div>
+              <div id="supplierTechSpecsList" class="supplier-tech-specs-list"></div>
+            </div>
             <label style="grid-column: span 4;">
-              <span>Características técnicas</span>
-              <textarea id="supplierTechCharacteristics" class="search-input" rows="2" placeholder="Características do item ofertado, configuração, padrões atendidos, etc."></textarea>
+              <span>Detalhamento técnico complementar</span>
+              <textarea id="supplierTechDetails" class="search-input" rows="3" placeholder="Observações técnicas mais completas, diferenciais, compatibilidades e detalhes da oferta."></textarea>
+            </label>
+            <label style="grid-column: span 4;">
+              <span>Texto técnico consolidado</span>
+              <textarea id="supplierTechCharacteristics" class="search-input" rows="3" placeholder="Esse campo é montado automaticamente com base no resumo, nas características estruturadas e nos detalhes."></textarea>
+              <small style="color:var(--text-muted);">Você ainda pode ajustar manualmente, mas o sistema já monta esse conteúdo para manter compatibilidade com os cadastros existentes.</small>
             </label>
             <label style="grid-column: span 4;">
               <span>Observações</span>
@@ -1392,6 +1433,12 @@
               <div class="subsection-title">Descrição técnica mínima</div>
               <div id="licCompareTechDescription" style="white-space: pre-wrap; background: var(--bg); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); color: var(--text-main);">—</div>
             </div>
+            <div style="margin-top:12px;">
+              <div class="subsection-title">Leitura técnica comparativa</div>
+              <div id="licCompareTechMatrix" class="supplier-tech-matrix">
+                <div class="dashboard-empty">Selecione um produto para ver o comparativo técnico.</div>
+              </div>
+            </div>
           </div>
 
           <div id="supplierCompareMinWarning" class="dashboard-empty" style="display:none; border: 1px solid rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.12);">
@@ -1436,11 +1483,12 @@
                     <th>Prazo</th>
                     <th>Garantia</th>
                     <th>Atende especificação</th>
+                    <th>Resumo técnico</th>
                     <th>Observações</th>
                   </tr>
                 </thead>
                 <tbody id="supplierCompareTableBody">
-                  <tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Selecione um produto para ver o comparativo.</td></tr>
+                  <tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--text-muted);">Selecione um produto para ver o comparativo.</td></tr>
                 </tbody>
               </table>
             </div>

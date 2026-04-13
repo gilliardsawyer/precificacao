@@ -14,6 +14,7 @@ export function setupSuppliersHub() {
   const compareHeaderName = document.getElementById('licCompareProductName');
   const compareHeaderCategory = document.getElementById('licCompareProductCategory');
   const compareTechDescription = document.getElementById('licCompareTechDescription');
+  const compareTechMatrix = document.getElementById('licCompareTechMatrix');
   const compareMinWarning = document.getElementById('supplierCompareMinWarning');
   const compareSupplierCount = document.getElementById('licCompareSupplierCount');
   const compareMinPrice = document.getElementById('licCompareMinPrice');
@@ -33,6 +34,13 @@ export function setupSuppliersHub() {
   const reportsContainer = document.getElementById('supplierReportsContainer');
   const cancelEditButton = document.getElementById('cancelProductSupplierEditBtn');
   const minSuppliersWarning = document.getElementById('supplierMinWarning');
+  const applyTechTemplateBtn = document.getElementById('applySupplierTechTemplateBtn');
+  const importSupplierTechBaseBtn = document.getElementById('importSupplierTechBaseBtn');
+  const openSupplierProductSheetBtn = document.getElementById('openSupplierProductSheetBtn');
+  const addSupplierSpecBtn = document.getElementById('addSupplierSpecBtn');
+  const supplierTechSpecsList = document.getElementById('supplierTechSpecsList');
+  const supplierTechTemplate = document.getElementById('supplierTechTemplate');
+  const supplierTechTagsPreview = document.getElementById('supplierTechTagsPreview');
 
   const fields = {
     id: document.getElementById('editingProductSupplierId'),
@@ -48,6 +56,9 @@ export function setupSuppliersHub() {
     proposalValidity: document.getElementById('supplierProposalValidity'),
     quoteDate: document.getElementById('supplierQuoteDate'),
     meetsMinimum: document.getElementById('supplierMeetsMinimum'),
+    techSummary: document.getElementById('supplierTechSummary'),
+    techTags: document.getElementById('supplierTechTags'),
+    techDetails: document.getElementById('supplierTechDetails'),
     techCharacteristics: document.getElementById('supplierTechCharacteristics'),
     notes: document.getElementById('supplierNotes')
   };
@@ -58,6 +69,275 @@ export function setupSuppliersHub() {
     averageQuotes: document.getElementById('supplierReportAverageQuotes'),
     uncoveredCount: document.getElementById('supplierReportUncoveredCount')
   };
+
+  const TECH_TEMPLATE_LIBRARY = {
+    generic: ['Especificação principal', 'Material', 'Dimensões', 'Capacidade', 'Norma / Certificação'],
+    nobreak: ['Potência', 'Voltagem', 'Autonomia', 'Tomadas', 'Proteções', 'Norma / Certificação'],
+    informatica: ['Processador / Chip', 'Memória / Capacidade', 'Conectividade', 'Portas', 'Sistema / Compatibilidade'],
+    impressao: ['Tecnologia', 'Velocidade', 'Resolução', 'Conectividade', 'Ciclo mensal'],
+    moveis: ['Material', 'Dimensões', 'Acabamento', 'Capacidade / Resistência', 'Norma / Certificação']
+  };
+
+  function normalizeText(value) {
+    return (value || '').toString().trim().toLowerCase();
+  }
+
+  function normalizeTagList(value) {
+    const source = Array.isArray(value) ? value.join(',') : (value || '');
+    return [...new Set(source
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+    )];
+  }
+
+  function createSpec(label = '', value = '', status = 'yes') {
+    return {
+      id: crypto.randomUUID(),
+      label: label.trim(),
+      value: value.trim(),
+      status: ['yes', 'partial', 'no'].includes(status) ? status : 'yes'
+    };
+  }
+
+  function normalizeSpecs(specs = []) {
+    return (Array.isArray(specs) ? specs : [])
+      .map((spec) => createSpec(spec?.label || '', spec?.value || '', spec?.status || 'yes'))
+      .filter((spec) => spec.label || spec.value);
+  }
+
+  function parseLegacyTechCharacteristics(text) {
+    const raw = (text || '').toString().trim();
+    if (!raw) {
+      return { summary: '', details: '', specs: [], tags: [] };
+    }
+
+    const parts = raw
+      .split(/\n|;/)
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+
+    const specs = [];
+    const details = [];
+    parts.forEach((part) => {
+      const match = part.match(/^([^:]{2,80}):\s*(.+)$/);
+      if (match) {
+        specs.push(createSpec(match[1], match[2], 'yes'));
+      } else {
+        details.push(part);
+      }
+    });
+
+    return {
+      summary: details[0] || raw.slice(0, 140),
+      details: details.join('\n'),
+      specs,
+      tags: []
+    };
+  }
+
+  function serializeSpecs(specs = []) {
+    return normalizeSpecs(specs)
+      .map((spec) => `${spec.label}: ${spec.value}${spec.status === 'partial' ? ' (parcial)' : spec.status === 'no' ? ' (não atende)' : ''}`)
+      .join('\n');
+  }
+
+  function buildTechCharacteristicsPayload(source = {}) {
+    const summary = (source.summary || '').trim();
+    const details = (source.details || '').trim();
+    const tags = normalizeTagList(source.tags);
+    const specs = normalizeSpecs(source.specs);
+    const lines = [];
+
+    if (summary) lines.push(summary);
+    if (tags.length) lines.push(`Tags: ${tags.join(', ')}`);
+    if (specs.length) lines.push(serializeSpecs(specs));
+    if (details) lines.push(details);
+
+    return {
+      techSummary: summary,
+      techDetails: details,
+      techTags: tags,
+      techSpecs: specs,
+      techCharacteristics: lines.filter(Boolean).join('\n')
+    };
+  }
+
+  function hydrateTechModel(relation = {}) {
+    const payload = buildTechCharacteristicsPayload({
+      summary: relation.techSummary,
+      details: relation.techDetails,
+      tags: relation.techTags,
+      specs: relation.techSpecs
+    });
+
+    if (payload.techSummary || payload.techDetails || payload.techTags.length || payload.techSpecs.length) {
+      return payload;
+    }
+
+    return buildTechCharacteristicsPayload(parseLegacyTechCharacteristics(relation.techCharacteristics));
+  }
+
+  function inferTemplateKey(product) {
+    const source = normalizeText(product?.category || product?.name || '');
+    if (source.includes('nobreak') || source.includes('energia') || source.includes('estabilizador')) return 'nobreak';
+    if (source.includes('impress')) return 'impressao';
+    if (source.includes('cadeira') || source.includes('mesa') || source.includes('armario') || source.includes('móvel') || source.includes('movel')) return 'moveis';
+    if (source.includes('notebook') || source.includes('comput') || source.includes('monitor') || source.includes('inform')) return 'informatica';
+    return 'generic';
+  }
+
+  function getSelectedProduct() {
+    return getProductMap().get(fields.productId?.value || '');
+  }
+
+  function getActiveTemplateKey() {
+    return supplierTechTemplate?.value || inferTemplateKey(getSelectedProduct());
+  }
+
+  function createSpecRowHtml(spec = createSpec()) {
+    return `
+      <div class="supplier-tech-spec-row" data-spec-id="${spec.id}">
+        <input type="text" class="search-input" data-role="label" placeholder="Campo técnico" value="${escapeHtml(spec.label)}">
+        <input type="text" class="search-input" data-role="value" placeholder="Valor / descrição" value="${escapeHtml(spec.value)}">
+        <select class="search-input" data-role="status">
+          <option value="yes" ${spec.status === 'yes' ? 'selected' : ''}>Atende</option>
+          <option value="partial" ${spec.status === 'partial' ? 'selected' : ''}>Parcial</option>
+          <option value="no" ${spec.status === 'no' ? 'selected' : ''}>Não atende</option>
+        </select>
+        <button type="button" class="ghost-button" data-role="remove">Remover</button>
+      </div>
+    `;
+  }
+
+  function readSpecsFromDom() {
+    if (!supplierTechSpecsList) return [];
+    return [...supplierTechSpecsList.querySelectorAll('[data-spec-id]')].map((row) => createSpec(
+      row.querySelector('[data-role="label"]')?.value || '',
+      row.querySelector('[data-role="value"]')?.value || '',
+      row.querySelector('[data-role="status"]')?.value || 'yes'
+    )).filter((spec) => spec.label || spec.value);
+  }
+
+  function renderSpecs(specs = [], options = {}) {
+    if (!supplierTechSpecsList) return;
+    const normalized = normalizeSpecs(specs);
+    const next = normalized.length ? normalized : (options.ensureOne === false ? [] : [createSpec()]);
+    supplierTechSpecsList.innerHTML = next.map((spec) => createSpecRowHtml(spec)).join('');
+  }
+
+  function renderTagsPreview() {
+    if (!supplierTechTagsPreview || !fields.techTags) return;
+    const tags = normalizeTagList(fields.techTags.value);
+    supplierTechTagsPreview.innerHTML = tags.length
+      ? tags.map((tag) => `<span class="supplier-tag-chip">${escapeHtml(tag)}</span>`).join('')
+      : '<span class="supplier-tech-muted">As tags ajudam na busca e no filtro técnico.</span>';
+  }
+
+  function syncTechCharacteristicsField() {
+    if (!fields.techCharacteristics) return;
+    const payload = buildTechCharacteristicsPayload({
+      summary: fields.techSummary?.value || '',
+      details: fields.techDetails?.value || '',
+      tags: fields.techTags?.value || '',
+      specs: readSpecsFromDom()
+    });
+    fields.techCharacteristics.value = payload.techCharacteristics;
+  }
+
+  function fillTechFields(relation = {}) {
+    const tech = hydrateTechModel(relation);
+    if (fields.techSummary) fields.techSummary.value = tech.techSummary || '';
+    if (fields.techDetails) fields.techDetails.value = tech.techDetails || '';
+    if (fields.techTags) fields.techTags.value = (tech.techTags || []).join(', ');
+    renderSpecs(tech.techSpecs);
+    renderTagsPreview();
+    if (fields.techCharacteristics) fields.techCharacteristics.value = tech.techCharacteristics || '';
+  }
+
+  function applyTechTemplate(force = false) {
+    const template = TECH_TEMPLATE_LIBRARY[getActiveTemplateKey()] || TECH_TEMPLATE_LIBRARY.generic;
+    const currentSpecs = readSpecsFromDom();
+    if (currentSpecs.length && !force) {
+      const hasContent = currentSpecs.some((spec) => spec.label || spec.value);
+      if (hasContent) {
+        showNotification('Modelo aplicado mantendo o que você já digitou. Use novamente se quiser reorganizar os campos.', 'info');
+        return;
+      }
+    }
+    renderSpecs(template.map((label) => createSpec(label, '', 'yes')));
+    syncTechCharacteristicsField();
+  }
+
+  function importProductTechBase() {
+    const product = getSelectedProduct();
+    if (!product) {
+      showNotification('Selecione um produto antes de importar a base técnica.', 'warning');
+      return;
+    }
+
+    const inferred = parseLegacyTechCharacteristics(product.technicalDescription || '');
+    if (fields.techSummary && !fields.techSummary.value.trim()) {
+      fields.techSummary.value = inferred.summary || product.name || '';
+    }
+    if (fields.techDetails) {
+      const detailText = [product.technicalDescription || '', fields.techDetails.value || '']
+        .filter(Boolean)
+        .join('\n\n')
+        .trim();
+      fields.techDetails.value = detailText;
+    }
+    if (fields.techTags && !fields.techTags.value.trim()) {
+      const categoryTag = product.category ? [product.category] : [];
+      fields.techTags.value = normalizeTagList(categoryTag).join(', ');
+    }
+    if (!readSpecsFromDom().some((spec) => spec.label || spec.value)) {
+      const template = TECH_TEMPLATE_LIBRARY[inferTemplateKey(product)] || TECH_TEMPLATE_LIBRARY.generic;
+      renderSpecs(template.map((label) => createSpec(label, '', 'yes')));
+    }
+    updateProductTechSheetButton();
+    renderTagsPreview();
+    syncTechCharacteristicsField();
+    showNotification('Base técnica do produto aplicada ao vínculo.', 'success');
+  }
+
+  function updateProductTechSheetButton() {
+    if (!openSupplierProductSheetBtn) return;
+    const product = getSelectedProduct();
+    const hasSheet = !!product?.technicalSheet?.dataUrl;
+    openSupplierProductSheetBtn.classList.toggle('hidden', !hasSheet);
+  }
+
+  function renderTechCell(relation, term) {
+    const tech = hydrateTechModel(relation);
+    const specsHtml = tech.techSpecs.length
+      ? `<ul class="supplier-tech-list">${tech.techSpecs.slice(0, 4).map((spec) => `
+          <li>
+            <strong>${highlightHtml(spec.label, term)}:</strong>
+            <span>${highlightHtml(spec.value || '—', term)}</span>
+            <em class="supplier-tech-status ${spec.status === 'no' ? 'danger' : spec.status === 'partial' ? 'warning' : 'ok'}">${spec.status === 'no' ? 'Não atende' : spec.status === 'partial' ? 'Parcial' : 'Atende'}</em>
+          </li>`).join('')}</ul>`
+      : '';
+    const extraCount = Math.max(0, tech.techSpecs.length - 4);
+    const tagsHtml = tech.techTags.length
+      ? `<div class="supplier-tech-inline-tags">${tech.techTags.map((tag) => `<span class="supplier-tag-chip">${highlightHtml(tag, term)}</span>`).join('')}</div>`
+      : '';
+    const detailsHtml = tech.techDetails
+      ? `<div class="supplier-tech-details is-collapsed" data-role="tech-details">${highlightHtml(tech.techDetails, term).replace(/\n/g, '<br>')}</div>`
+      : '';
+    const toggleHtml = tech.techDetails || extraCount
+      ? `<button type="button" class="ghost-button supplier-tech-toggle" data-action="toggle-tech-details">${extraCount ? `Ver mais ${extraCount} item(ns)` : 'Ver mais'}</button>`
+      : '';
+    return `
+      <div class="supplier-tech-block">
+        ${tech.techSummary ? `<strong class="supplier-tech-summary">${highlightHtml(tech.techSummary, term)}</strong>` : ''}
+        ${tagsHtml}
+        ${specsHtml}
+        ${detailsHtml}
+        ${toggleHtml}
+      </div>
+    `;
+  }
 
   function getProducts() {
     return loadProducts();
@@ -202,6 +482,10 @@ export function setupSuppliersHub() {
     form.reset();
     fields.id.value = '';
     if (fields.supplierId) fields.supplierId.value = '';
+    if (fields.meetsMinimum) fields.meetsMinimum.value = 'yes';
+    if (supplierTechTemplate) supplierTechTemplate.value = '';
+    fillTechFields({});
+    updateProductTechSheetButton();
     const submitButton = document.getElementById('saveProductSupplierBtn');
     if (submitButton) {
       submitButton.textContent = 'Salvar vínculo';
@@ -282,6 +566,10 @@ export function setupSuppliersHub() {
           relation.model,
           relation.warranty,
           relation.proposalValidity,
+          relation.techSummary,
+          ...(relation.techTags || []),
+          ...(relation.techSpecs || []).flatMap((spec) => [spec?.label, spec?.value]),
+          relation.techDetails,
           relation.techCharacteristics,
           relation.notes
         ].join(' ').toLowerCase();
@@ -315,7 +603,7 @@ export function setupSuppliersHub() {
         <td style="text-align:center;">${escapeHtml(relation.proposalValidity || '—')}</td>
         <td style="text-align:center;">${meetsBadge(relation.meetsMinimum)}</td>
         <td style="text-align:center;">${escapeHtml(relation.quoteDate || '—')}</td>
-        <td class="supplier-tech-cell">${highlightHtml(relation.techCharacteristics || '—', term)}</td>
+        <td class="supplier-tech-cell">${renderTechCell(relation, term)}</td>
         <td class="supplier-notes-cell">${highlightHtml(relation.notes || '—', term)}</td>
         <td class="supplier-actions-cell" style="text-align:center; display:flex; gap:4px; justify-content:center;">
           <button type="button" class="product-action-btn edit" data-action="edit-product-supplier" data-id="${relation.id}" title="Editar">✏️</button>
@@ -324,6 +612,78 @@ export function setupSuppliersHub() {
       </tr>
     `;
     }).join('');
+  }
+
+  function renderCompareTechMatrix(offers, term) {
+    if (!compareTechMatrix) return;
+
+    if (!offers.length) {
+      compareTechMatrix.innerHTML = '<div class="dashboard-empty">Nenhum fornecedor vinculado a este produto ainda.</div>';
+      return;
+    }
+
+    const supplierMap = getSupplierMap();
+    const supplierColumns = offers.map((offer) => {
+      const supplier = offer.supplierId ? supplierMap.get(offer.supplierId) : null;
+      return {
+        id: offer.id,
+        name: supplier?.name || offer.supplierName || '—',
+        summary: hydrateTechModel(offer).techSummary || 'Sem resumo'
+      };
+    });
+
+    const specMap = new Map();
+    offers.forEach((offer) => {
+      const tech = hydrateTechModel(offer);
+      tech.techSpecs.forEach((spec) => {
+        const key = normalizeText(spec.label);
+        if (!key) return;
+        const row = specMap.get(key) || { label: spec.label, values: new Map() };
+        row.values.set(offer.id, spec);
+        specMap.set(key, row);
+      });
+    });
+
+    const rows = [...specMap.values()];
+    const matrixRows = rows.length
+      ? rows.map((row) => `
+          <tr>
+            <th>${highlightHtml(row.label, term)}</th>
+            ${supplierColumns.map((supplier) => {
+              const spec = row.values.get(supplier.id);
+              if (!spec) return '<td><span class="supplier-tech-muted">—</span></td>';
+              const statusClass = spec.status === 'no' ? 'danger' : spec.status === 'partial' ? 'warning' : 'ok';
+              const statusLabel = spec.status === 'no' ? 'Não atende' : spec.status === 'partial' ? 'Parcial' : 'Atende';
+              return `<td>
+                <div class="supplier-tech-compare-value">${highlightHtml(spec.value || '—', term)}</div>
+                <span class="supplier-tech-pill ${statusClass}">${statusLabel}</span>
+              </td>`;
+            }).join('')}
+          </tr>
+        `).join('')
+      : `<tr><td colspan="${supplierColumns.length + 1}" style="text-align:center; color:var(--text-muted); padding:1rem;">As ofertas ainda não possuem características estruturadas para comparar.</td></tr>`;
+
+    compareTechMatrix.innerHTML = `
+      <div class="supplier-tech-summary-grid">
+        ${supplierColumns.map((supplier) => `
+          <article class="supplier-tech-summary-card">
+            <strong>${highlightHtml(supplier.name, term)}</strong>
+            <small>${highlightHtml(supplier.summary, term)}</small>
+          </article>
+        `).join('')}
+      </div>
+      <div class="checklist-table-container" style="margin-top:12px;">
+        <table class="pricing-table supplier-tech-compare-table">
+          <thead>
+            <tr>
+              <th>Característica</th>
+              ${supplierColumns.map((supplier) => `<th>${highlightHtml(supplier.name, term)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>${matrixRows}</tbody>
+        </table>
+      </div>
+    `;
   }
 
   function renderComparison() {
@@ -339,12 +699,13 @@ export function setupSuppliersHub() {
       if (compareHeaderName) compareHeaderName.textContent = 'Selecione um produto para comparar';
       if (compareHeaderCategory) compareHeaderCategory.textContent = '—';
       if (compareTechDescription) compareTechDescription.textContent = '—';
+      if (compareTechMatrix) compareTechMatrix.innerHTML = '<div class="dashboard-empty">Selecione um produto para ver o comparativo técnico.</div>';
       if (compareMinWarning) compareMinWarning.style.display = 'none';
       if (compareSupplierCount) compareSupplierCount.textContent = '0';
       if (compareMinPrice) compareMinPrice.textContent = formatCurrency(0);
       if (compareMaxPrice) compareMaxPrice.textContent = formatCurrency(0);
       if (compareAvgPrice) compareAvgPrice.textContent = formatCurrency(0);
-      compareTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Selecione um produto para ver o comparativo.</td></tr>';
+      compareTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--text-muted);">Selecione um produto para ver o comparativo.</td></tr>';
       return;
     }
 
@@ -392,7 +753,25 @@ export function setupSuppliersHub() {
       return '<span class="badge-category cat-outros">—</span>';
     };
 
-    compareTableBody.innerHTML = offers.length ? offers.map((offer) => {
+    const visibleOffers = offers.filter((offer) => {
+      const supplier = offer.supplierId ? supplierMap.get(offer.supplierId) : null;
+      const supplierName = supplier?.name || offer.supplierName || '—';
+      const supplierDocument = supplier?.document || offer.supplierDocument || '';
+      return !term || [
+        supplierName,
+        supplierDocument,
+        offer.brand,
+        offer.model,
+        offer.techSummary,
+        ...(offer.techTags || []),
+        ...(offer.techSpecs || []).flatMap((spec) => [spec?.label, spec?.value]),
+        offer.techDetails,
+        offer.warranty,
+        offer.notes
+      ].join(' ').toLowerCase().includes(term);
+    });
+
+    compareTableBody.innerHTML = offers.length ? visibleOffers.map((offer) => {
       const price = toNumber(offer.quotedPrice);
       const isMin = priceValues.length && price > 0 && price === min;
       const meets = !(offer.meetsMinimum === false || offer.meetsMinimum === 'no');
@@ -401,15 +780,7 @@ export function setupSuppliersHub() {
       const supplier = offer.supplierId ? supplierMap.get(offer.supplierId) : null;
       const supplierName = supplier?.name || offer.supplierName || '—';
       const supplierDocument = supplier?.document || offer.supplierDocument || '';
-      const show = !term || [
-        supplierName,
-        supplierDocument,
-        offer.brand,
-        offer.model,
-        offer.warranty,
-        offer.notes
-      ].join(' ').toLowerCase().includes(term);
-      if (!show) return '';
+      const tech = hydrateTechModel(offer);
       return `
         <tr class="${rowClass}">
           <td>${highlightHtml(supplierName, term)}${supplierDocument ? `<div style="font-size:0.75rem;color:var(--text-muted)">${highlightHtml(supplierDocument, term)}</div>` : ''}</td>
@@ -419,10 +790,12 @@ export function setupSuppliersHub() {
           <td style="text-align:center;">${offer.leadTimeDays ? `${escapeHtml(String(offer.leadTimeDays))} dias` : '—'}</td>
           <td style="text-align:center;">${highlightHtml(offer.warranty || '—', term)}</td>
           <td style="text-align:center;">${meetsBadge(offer.meetsMinimum)}</td>
+          <td class="supplier-tech-cell">${renderTechCell({ ...offer, ...tech }, term)}</td>
           <td>${highlightHtml(offer.notes || '—', term)}</td>
         </tr>
       `;
-    }).join('').trim() || '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum fornecedor encontrado para a busca atual.</td></tr>' : '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum fornecedor vinculado a este produto ainda.</td></tr>';
+    }).join('').trim() || '<tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum fornecedor encontrado para a busca atual.</td></tr>' : '<tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum fornecedor vinculado a este produto ainda.</td></tr>';
+    renderCompareTechMatrix(term ? visibleOffers : offers, term);
   }
 
   function renderReports() {
@@ -617,9 +990,13 @@ export function setupSuppliersHub() {
     fields.warranty.value = relation.warranty || '';
     fields.proposalValidity.value = relation.proposalValidity || '';
     fields.quoteDate.value = relation.quoteDate || '';
-    fields.meetsMinimum.value = (relation.meetsMinimum === false || relation.meetsMinimum === 'no') ? 'no' : 'yes';
-    fields.techCharacteristics.value = relation.techCharacteristics || '';
+    fields.meetsMinimum.value = (relation.meetsMinimum === false || relation.meetsMinimum === 'no')
+      ? 'no'
+      : (relation.meetsMinimum === 'partial' ? 'partial' : 'yes');
+    fillTechFields(relation);
     fields.notes.value = relation.notes || '';
+    if (supplierTechTemplate) supplierTechTemplate.value = inferTemplateKey(getProductMap().get(relation.productId));
+    updateProductTechSheetButton();
     const submitButton = document.getElementById('saveProductSupplierBtn');
     if (submitButton) {
       submitButton.textContent = 'Atualizar vínculo';
@@ -641,6 +1018,7 @@ export function setupSuppliersHub() {
     migrateRelationsToSupplierIds();
     fillProductSelectOptions();
     updateSupplierDatalist();
+    updateProductTechSheetButton();
     renderSupplierLinks();
     renderComparison();
     renderReports();
@@ -724,6 +1102,16 @@ export function setupSuppliersHub() {
       const actionButton = event.target.closest('[data-action]');
       if (!actionButton) return;
 
+      if (actionButton.dataset.action === 'toggle-tech-details') {
+        const block = actionButton.closest('.supplier-tech-block');
+        const details = block?.querySelector('[data-role="tech-details"]');
+        if (details) {
+          details.classList.toggle('is-collapsed');
+          actionButton.textContent = details.classList.contains('is-collapsed') ? 'Ver mais' : 'Ver menos';
+        }
+        return;
+      }
+
       const id = actionButton.dataset.id;
       if (actionButton.dataset.action === 'edit-product-supplier') {
         editRelation(id);
@@ -733,6 +1121,16 @@ export function setupSuppliersHub() {
       }
     });
   }
+
+  compareTableBody?.addEventListener('click', (event) => {
+    const actionButton = event.target.closest('[data-action="toggle-tech-details"]');
+    if (!actionButton) return;
+    const block = actionButton.closest('.supplier-tech-block');
+    const details = block?.querySelector('[data-role="tech-details"]');
+    if (!details) return;
+    details.classList.toggle('is-collapsed');
+    actionButton.textContent = details.classList.contains('is-collapsed') ? 'Ver mais' : 'Ver menos';
+  });
 
   form?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -760,6 +1158,12 @@ export function setupSuppliersHub() {
     const supplierResolved = getSupplierMap().get(supplierId);
     const supplierNameResolved = supplierResolved?.name || fields.supplierName.value.trim();
     const supplierDocumentResolved = supplierResolved?.document || fields.supplierDocument.value.trim();
+    const techPayload = buildTechCharacteristicsPayload({
+      summary: fields.techSummary?.value || '',
+      details: fields.techDetails?.value || '',
+      tags: fields.techTags?.value || '',
+      specs: readSpecsFromDom()
+    });
 
     const entry = {
       id: fields.id.value || crypto.randomUUID(),
@@ -775,8 +1179,12 @@ export function setupSuppliersHub() {
       warranty: fields.warranty.value.trim(),
       proposalValidity: fields.proposalValidity.value.trim(),
       quoteDate: fields.quoteDate.value || '',
-      meetsMinimum: fields.meetsMinimum.value === 'no' ? false : true,
-      techCharacteristics: fields.techCharacteristics.value.trim(),
+      meetsMinimum: fields.meetsMinimum.value === 'no' ? false : (fields.meetsMinimum.value === 'partial' ? 'partial' : true),
+      techSummary: techPayload.techSummary,
+      techDetails: techPayload.techDetails,
+      techTags: techPayload.techTags,
+      techSpecs: techPayload.techSpecs,
+      techCharacteristics: techPayload.techCharacteristics,
       notes: fields.notes.value.trim(),
       updatedAt: new Date().toISOString()
     };
@@ -796,11 +1204,54 @@ export function setupSuppliersHub() {
 
   cancelEditButton?.addEventListener('click', resetForm);
   compareFilter?.addEventListener('change', renderComparison);
-  fields.productId?.addEventListener('change', updateMinSuppliersWarning);
+  fields.productId?.addEventListener('change', () => {
+    updateMinSuppliersWarning();
+    updateProductTechSheetButton();
+    if (supplierTechTemplate && !supplierTechTemplate.value) {
+      supplierTechTemplate.value = inferTemplateKey(getSelectedProduct());
+    }
+  });
   fields.supplierName?.addEventListener('input', () => syncSupplierFromInputs(false));
   fields.supplierDocument?.addEventListener('input', () => syncSupplierFromInputs(true));
   fields.supplierName?.addEventListener('blur', () => syncSupplierFromInputs(false));
   fields.supplierDocument?.addEventListener('blur', () => syncSupplierFromInputs(true));
+  fields.techSummary?.addEventListener('input', syncTechCharacteristicsField);
+  fields.techDetails?.addEventListener('input', syncTechCharacteristicsField);
+  fields.techTags?.addEventListener('input', () => {
+    renderTagsPreview();
+    syncTechCharacteristicsField();
+  });
+  fields.techCharacteristics?.addEventListener('input', () => {
+    const parsed = parseLegacyTechCharacteristics(fields.techCharacteristics.value);
+    if (!fields.techSummary?.value.trim()) fields.techSummary.value = parsed.summary || '';
+    if (!fields.techDetails?.value.trim()) fields.techDetails.value = parsed.details || '';
+    if (!readSpecsFromDom().some((spec) => spec.label || spec.value) && parsed.specs.length) {
+      renderSpecs(parsed.specs);
+    }
+  });
+  supplierTechSpecsList?.addEventListener('input', syncTechCharacteristicsField);
+  supplierTechSpecsList?.addEventListener('change', syncTechCharacteristicsField);
+  supplierTechSpecsList?.addEventListener('click', (event) => {
+    const removeButton = event.target.closest('[data-role="remove"]');
+    if (!removeButton) return;
+    removeButton.closest('[data-spec-id]')?.remove();
+    if (!supplierTechSpecsList.querySelector('[data-spec-id]')) {
+      renderSpecs([], { ensureOne: true });
+    }
+    syncTechCharacteristicsField();
+  });
+  addSupplierSpecBtn?.addEventListener('click', () => {
+    supplierTechSpecsList?.insertAdjacentHTML('beforeend', createSpecRowHtml(createSpec()));
+    syncTechCharacteristicsField();
+  });
+  applyTechTemplateBtn?.addEventListener('click', () => applyTechTemplate(true));
+  importSupplierTechBaseBtn?.addEventListener('click', importProductTechBase);
+  openSupplierProductSheetBtn?.addEventListener('click', () => {
+    const product = getSelectedProduct();
+    if (product?.technicalSheet?.dataUrl) {
+      window.open(product.technicalSheet.dataUrl, '_blank', 'noopener');
+    }
+  });
   window.addEventListener('products:updated', refreshAll);
   globalSearchInput?.addEventListener('input', () => {
     renderSupplierLinks();
